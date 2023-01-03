@@ -22,6 +22,16 @@ Note: The version of pytorch must be compatible with the version of Cuda used in
 ### NLP framework
 we use Roberta model in BinProv. Here we build the model using [`fairseq`](https://github.com/facebookresearch/fairseq) tool relased by Facebook Research. 
 
+### Baseline
+1. [BinRNN](https://github.com/shuwang127/BinRNN) (implemented by ourselves)
+2. [o-glassesX](https://github.com/yotsubo/o-glassesX)
+3. [Origin](https://github.com/dyninst/toolchain-origin)
+
+## Training
+### Pretrain
+
+### Finetune
+
 
 ## Citation
 ```

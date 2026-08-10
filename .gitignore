@@ -1,0 +1,27 @@
+# Datasets, corpora, checkpoints and raw run output. All large and reproducible
+# from the scripts, so none of them belong in git. The curated, small versions of
+# the results live in reports/ and ARE tracked.
+data/
+checkpoints/
+logs/
+results/
+
+# The paper PDF. It is CC-BY 4.0, so redistributing it is permitted -- but the
+# repo links to the DOI instead of carrying a 1.2 MB copy. Delete this line if
+# you would rather ship it.
+3545948.3545956.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# packaging output
+dist/

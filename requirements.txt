@@ -1,0 +1,21 @@
+# BinProv runtime dependencies.
+#
+# Deliberately short. The original paper built the network with fairseq; this
+# re-implementation uses HuggingFace transformers instead, which is compatible
+# with current PyTorch (fairseq pins old torch versions and no longer builds
+# cleanly). The architecture is the same: a 12-layer, 768-hidden RoBERTa/BERT
+# encoder over a 261-token byte vocabulary.
+#
+# ELF parsing is done in-tree (binprov/elf.py) so corpus building needs no
+# native dependencies, and the metrics are hand-rolled so evaluation runs
+# anywhere the model runs.
+
+torch>=2.0
+transformers>=4.35
+numpy>=1.23
+
+# Optional, only for scripts/fetch_binkit.sh:
+#   gdown>=4.7    BinKit is hosted on Google Drive
+#   py7zr>=0.20   fallback extractor; BinKit ships .7z archives. Preferred is
+#                 bsdtar/libarchive, which is usually already installed and
+#                 reads .7z with the same wildcard syntax as tar.

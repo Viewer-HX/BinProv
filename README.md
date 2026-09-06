@@ -150,8 +150,6 @@ Run `--group all --execute` once to produce all supported result tables, reusing
 shared model runs within that plan.
 ## Documentation
 
-- [docs/HUGGINGFACE_RELEASE.md](docs/HUGGINGFACE_RELEASE.md) — reviewed model
-  card, repository naming, upload source, and publication checks.
 - [docs/LOCAL_TRAINING.md](docs/LOCAL_TRAINING.md) — **bounded local training on
   one Mac** (MPS): the `opt4_narrow_seed13` / `opt4_wide_seed29` profiles, memory
   measurements, `--grad-accum`, resume/export workflow.

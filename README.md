@@ -27,8 +27,9 @@ python inference.py --model model --elf /path/to/binary.elf
 
 ## Best results first
 
-BinKit x86_64, **program-grouped split** (47 test programs); archived
-measurements from one NVIDIA H200 (bf16). Full provenance and replay:
+BinKit x86_64, **program-grouped split** (47 test programs); curated archived
+measurements. The supported training environment is the verified GMU Hopper
+A100 80 GB recipe below. Full provenance and replay:
 [docs/BEST_RESULTS.md](docs/BEST_RESULTS.md). Verified offline tables: [reports/tables/best/](reports/tables/best/).
 
 **Units.** The encoder *input* is 2048 bytes, but accuracy is scored at the
@@ -128,8 +129,9 @@ Run `--group all --execute` once to produce all supported result tables, reusing
 shared model runs within that plan.
 ## Documentation
 
-- [docs/HOPPER_TRAINING.md](docs/HOPPER_TRAINING.md) — Slurm recipe for training
-  and exporting the best single `opt4_wide_seed29` model on an A100/H100 80 GB GPU;
+- [docs/HOPPER_TRAINING.md](docs/HOPPER_TRAINING.md) — verified GMU Hopper
+  Slurm recipe for training and exporting the best single
+  `opt4_wide_seed29` model on one A100 80 GB GPU;
   the verified A100 replica reached **84.23% sequence / 93.88% binary accuracy**.
 - [docs/HUGGINGFACE_RELEASE.md](docs/HUGGINGFACE_RELEASE.md) — reviewed model
   card, repository naming, upload source, and publication checks.

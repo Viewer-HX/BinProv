@@ -2,21 +2,19 @@
 # ---------------------------------------------------------------------------
 # Slurm batch script for the BinProv Hopper (CUDA) release training.
 #
-# Default: A100 80 GB on the public gpuq partition.
-# To use an H100 contributor node instead, supply at sbatch time:
-#   sbatch -p contrib-H100 --qos=gpu --gres=gpu:H100.80gb:1 scripts/hopper_release.sbatch
-# (No Slurm account name is embedded in this script.)
+# Verified allocation: one A100 80 GB on contrib-gpuq with the ksun QOS.
+# Adjust the partition and QOS only when reproducing under another allocation.
 # ---------------------------------------------------------------------------
 #SBATCH --job-name=binprov-hop
-#SBATCH --partition=gpuq
-#SBATCH --qos=gpu
+#SBATCH --partition=contrib-gpuq
+#SBATCH --qos=ksun
 #SBATCH --gres=gpu:A100.80gb:1
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-# A one-day request fits Hopper's current H100 backfill window and still leaves
-# substantial margin over the measured 7.5--9 h H200 reference run.
+# The verified Hopper run completed in 12:42:09; one day leaves margin for
+# scheduler variation, requeue, and resume overhead.
 #SBATCH --time=24:00:00
 #SBATCH --requeue
 # Keep Slurm's own log in the submission directory. Slurm opens it before this

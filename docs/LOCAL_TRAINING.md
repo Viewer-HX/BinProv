@@ -40,10 +40,10 @@ overhead and CPU contention out of the timing-critical loop.
 
 ## Duration estimates (rough)
 
-**Do not read these as commitments.** The archived GPU runs took 28 minutes
-(narrow seed 13) and 3h15m (wide seed 29) on one NVIDIA H200; an M-series Mac is
-a different and much slower device, and the *full* runs below have **not been
-executed** in this repository state.
+**Do not read these as commitments.** The verified wide release pipeline took
+12:42:09 on one A100 80 GB on GMU Hopper. An M-series Mac is a different and
+much slower device, and the *full* local runs below have **not been executed**
+in this repository state.
 
 | profile | what it trains | rough wall-clock on one M4 Max |
 |---|---|---|
@@ -78,8 +78,8 @@ Replays `reports/runs/best/r9_opt4_base_seed13` (task `opt4`, seed 13,
 The archived run scored **81.11% sequence-level accuracy** (soft binary vote
 92.82%) on the 116,321-window test set. A fresh run **will not land exactly on
 81.11%**: the seed is pinned and the val partition is pinned (`--val-seed 1234`),
-but torch/transformers version and the MPS vs H200 backend still move the number
-~1–2 points. Treat 81% as the target, not the guarantee.
+but torch/transformers version and the MPS vs Hopper CUDA backend still move
+the number ~1–2 points. Treat 81% as the target, not the guarantee.
 
 ### `opt4_wide_seed29` — optional
 

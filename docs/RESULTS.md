@@ -26,7 +26,6 @@ way.
 | Encoder | 12 layers, 768 hidden, 86.2M parameters |
 | MLM | 10 epochs, batch 256, lr 1e-4 → val loss 0.941, masked-byte acc 75.15% |
 | Fine-tuning | 3 epochs per task, batch 128, lr 3e-5 encoder / 1e-4 head |
-| Hardware | 1× H200, bf16 |
 
 Compiler versions are pinned to one per family on purpose: BinKit ships 5 GCC and
 4 Clang versions, and using all of them would put 9 compilers into a 2-class task.
@@ -306,5 +305,6 @@ CUDA_VISIBLE_DEVICES=<free gpu> ARCH=x86_64 \
   scripts/run_binkit.sh
 ```
 
-Roughly 1.5 h of download and corpus building, 1.2 h of pre-training, 1.7 h of
-fine-tuning across five tasks, and 20 min of evaluation on one H200.
+For a measured compute budget, use the supported Hopper release workflow in
+[HOPPER_TRAINING.md](HOPPER_TRAINING.md): its complete wide training,
+evaluation, and export pipeline finished in 12:42:09 on one A100 80 GB.

@@ -21,8 +21,8 @@ numpy>=1.23
 #                 reads .7z with the same wildcard syntax as tar.
 
 # ---------------------------------------------------------------------------
-# Versions the results in docs/ were produced with. The bounds above are what
-# the code needs; these are what it ran on. Accuracy numbers on this task move
+# Versions used by the verified GMU Hopper release run. The bounds above are
+# what the code needs; these are what the published model ran on. Accuracy moves
 # by 1-2 points between seeds, so a different torch or transformers version is
 # a plausible source of a similar-sized shift -- pin these if you are comparing
 # against the tables rather than just running the pipeline.
@@ -32,5 +32,5 @@ numpy>=1.23
 #   transformers     4.55.4
 #   numpy            2.3.3
 #
-# GPU: one NVIDIA H200 (141 GB). bf16 autocast throughout. The 2048-byte arms
-# need ~33 GB; the 512-byte arms ~26 GB at batch 128.
+# GPU: one NVIDIA A100 80 GB on GMU Hopper, bf16 autocast throughout. The exact
+# micro-batches and gradient accumulation are in configs/hopper_release.json.

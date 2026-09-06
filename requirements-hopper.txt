@@ -1,6 +1,5 @@
-# Exact environment used by the archived best-result runs. Install this file on
-# Hopper when the goal is a comparable release checkpoint rather than merely a
-# compatible development environment.
+# Exact Python package environment used by the verified A100 release run on
+# GMU Hopper (Slurm job 9558937).
 torch==2.8.0
 transformers==4.55.4
 numpy==2.3.3

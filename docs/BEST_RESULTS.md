@@ -2,17 +2,19 @@
 
 Headline BinProv results, their exact archived run
 membership, and how to replay them. Machine-readable single source of truth:
-[../configs/best_results.json](../configs/best_results.json). The training measurements were produced on an H200. On 2026-09-05, the five
-recipes with exact membership were independently recomputed from the supplied
+[../configs/best_results.json](../configs/best_results.json). On 2026-09-05, the
+five recipes with exact membership were independently recomputed from the supplied
 probabilities and canonical corpus; see
 [verified tables](../reports/tables/best/README.md). No model was retrained. Per-run accuracies are not
 copied into the manifest or this page — they are read at runtime from each run's
 archived `result.json`, so the driver displays the source measurements alongside each training command.
 
-## Environment and corpus
+## Supported environment and corpus
+
 | | |
 |---|---|
-| GPU / precision | one NVIDIA H200 (141 GB), bf16 autocast |
+| Training environment | GMU Hopper, one NVIDIA A100 80 GB, bf16 autocast |
+| Verified job | Slurm `9558937`, completed in 12:42:09 without restart |
 | Recorded versions | python 3.12.11, torch 2.8.0+cu128, transformers 4.55.4, numpy 2.3.3 |
 | Corpus | BinKit x86_64, program-grouped split (47 test / 28 val programs) |
 | O2/O3 test set | 55,657 windows |

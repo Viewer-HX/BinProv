@@ -1,8 +1,8 @@
 # Hopper (CUDA) release training
 
-This is the *bounded, Slurm-managed* path to reproduce the best-wide
-`opt4_wide_seed29` model on GMU Hopper using A100 80 GB (or H100 contributor)
-GPUs. It reuses the same training driver and config structure as the local MPS
+This is the *bounded, Slurm-managed* path used to reproduce the best-wide
+`opt4_wide_seed29` model on GMU Hopper using one A100 80 GB GPU. It reuses the
+same training driver and config structure as the local MPS
 path but with CUDA micro-batches sized for 80 GB GPUs and data-loader workers.
 
 All generated output lands under `results/hopper_release/<profile>/` — never on
@@ -45,24 +45,14 @@ no network access is required inside the job.
 
 ## Submitting
 
-### Default (A100 80 GB)
+### Verified A100 80 GB allocation
 
 ```bash
 sbatch scripts/hopper_release.sbatch
 ```
 
-### Contributor H100 override
-
-Pass the partition/QOS/GRES at submission time; the script's defaults are
-overridden automatically:
-
-```bash
-sbatch \
-  -p contrib-H100 \
-  --qos=gpu \
-  --gres=gpu:H100.80gb:1 \
-  scripts/hopper_release.sbatch
-```
+The committed script requests the same `contrib-gpuq` partition, `ksun` QOS,
+one A100 80 GB, 8 CPUs, 64 GB RAM, and 24-hour limit used by the completed run.
 
 ## Monitoring
 
@@ -142,20 +132,18 @@ four-window prediction check. Compact evidence is committed at
 
 ## Duration estimate
 
-The archived run on one NVIDIA H200 took roughly:
+The verified A100 run provides the planning baseline:
 
-| stage | wall-clock |
-|---|---|
-| MLM512 (10 epochs, eff. batch 256) | ~1 h 11 min |
-| MLM2048 (10 epochs, eff. batch 64) | ~2 h 15 min |
-| opt4 finetune (6 epochs, eff. batch 32) | ~3 h 15 min |
-| evaluation and export | additional time |
-| **full release pipeline** | **~7.5–9 h** |
+| stage | measured wall-clock |
+|---|---:|
+| MLM512 (10 epochs, effective batch 256) | 2:22:18 |
+| MLM2048 (10 epochs, effective batch 64) | 3:24:17 |
+| opt4 fine-tuning and evaluation (6 epochs, effective batch 32) | 6:55:04 |
+| export | 0:00:29 |
+| **full release pipeline** | **12:42:09** |
 
-Those archived stages used a 141 GB H200. The conservative 80 GB micro-batches
-in this profile add some overhead. The verified A100 run took **12 h 42 min**;
-retain the 24-hour Slurm request to cover queue-dependent hardware variation and
-resume overhead.
+Retain the 24-hour Slurm request to cover queue-dependent variation, restarts,
+and resume overhead.
 
 ## See also
 

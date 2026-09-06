@@ -29,8 +29,8 @@ def set_seed(seed: int) -> None:
 def pick_device(*, prefer_bf16: bool = True) -> tuple[torch.device, torch.dtype | None]:
     """Return ``(device, autocast_dtype)``.
 
-    ``autocast_dtype`` is None on CPU, bf16 on any recent NVIDIA card (H200
-    included), fp16 otherwise. bf16 needs no loss scaling, which keeps the
+    ``autocast_dtype`` is None on CPU, bf16 on supported NVIDIA cards, and fp16
+    otherwise. bf16 needs no loss scaling, which keeps the
     training loop simpler. On Apple Silicon the device is MPS, also with bf16
     autocast (supported on Apple silicon and torch >= 2.3); the M-series chips
     do not accelerate fp16 well, so bf16 is the only AMP dtype offered there.

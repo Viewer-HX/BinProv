@@ -7,7 +7,7 @@ with a BERT-style byte-level encoder, and classifies. The 261-token vocabulary
 
 Paper: "BinProv: Binary Code Provenance Identification without Disassembly", RAID 2022 —
 [10.1145/3545948.3545956](https://doi.org/10.1145/3545948.3545956). BibTeX: see [Citation](#citation).
-> **Repository note.** The original implementation was lost; this is a rebuild on
+> **Repository note.** This is a rebuild version, implemented on
 > Hugging Face `transformers` (replacing the original fairseq setup). The choices
 > needed to reproduce the paper and released model are documented explicitly.
 

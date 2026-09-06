@@ -1,0 +1,91 @@
+# Canonical program partition for data/corpus/binkit_x86_64, splits 'default'
+# (train_ratio 0.8, group_by program, seed 1234) and the validation carve-out
+# used by every exploration run (--val-frac 0.15 --val-seed 1234).
+#
+# Shipped so a reproducer can VERIFY the split rather than trust it. The split is
+# derived from the sorted set of program names, so it is reproducible as long as
+# the corpus contains the same programs -- but a different BinKit extraction, or a
+# different Python whose random.shuffle differs, would silently change the test set
+# and make every number incomparable. Check against this file first.
+#
+# 235 programs total: 47 test, 28 validation,
+# 160 train.
+
+[TEST]
+a2ps/fixnt
+binutils/ar
+binutils/as
+binutils/gprof
+binutils/nm
+binutils/ranlib
+bool/bool
+ccd2cue/ccd2cue
+coreutils/base32
+coreutils/base64
+coreutils/basename
+coreutils/chcon
+coreutils/chroot
+coreutils/dir
+coreutils/factor
+coreutils/logname
+coreutils/mkdir
+coreutils/nl
+coreutils/sha1sum
+coreutils/sha256sum
+coreutils/tty
+coreutils/users
+coreutils/vdir
+coreutils/yes
+cpio/cpio
+dap/dappp
+datamash/datamash
+findutils/find
+gawk/gawk
+gdbm/gdbm_load
+gdbm/gdbmtool
+gmp/libgmp.so.10.3.2
+gnudos/prime
+gsasl/libgsasl.so.7.9.6
+gss/libgss.so.3.0.3
+inetutils/ftpd
+inetutils/hostname
+inetutils/inetd
+inetutils/rshd
+inetutils/tftp
+libunistring/libunistring.so.2.1.0
+nettle/nettle-hash
+nettle/nettle-pbkdf2
+plotutils/double
+recutils/recsel
+time/time
+wdiff/wdiff
+
+[VALIDATION]
+coreutils/b2sum
+coreutils/dircolors
+coreutils/false
+coreutils/fold
+coreutils/od
+coreutils/pinky
+coreutils/rmdir
+coreutils/shred
+coreutils/stat
+coreutils/stty
+coreutils/tee
+coreutils/timeout
+coreutils/touch
+coreutils/tr
+dap/daprun
+gcal/gcal
+glpk/glpsol
+glpk/libglpk.so.40.3.0
+gnu-pw-mgr/gnu-pw-mgr
+gsl/gsl-histogram
+inetutils/rexecd
+inetutils/tftpd
+libiconv/libcharset.so.1.0.0
+libiconv/libiconv.so.2.6.0
+readline/libreadline.so.7.0
+recutils/recinf
+sharutils/shar
+tar/tar

@@ -1,0 +1,290 @@
+{
+  "_comment": "Machine-readable map of the best headline results to the exact archived runs and parameters that produced them. Single source of truth for scripts/run_best.py (dry-run default), scripts/reproduce_best.sh (wrapper), and docs/BEST_RESULTS.md. Per-run accuracies are NOT copied here: they are read from each run's archived result.json at runtime so the manifest cannot drift from the evidence.",
+  "meta": {
+    "corpus": "BinKit x86_64, program-grouped split (47 test programs / 28 val programs). O2/O3 test = 55,657 windows; opt4 test = 116,321 windows.",
+    "versions": "python 3.12.11, torch 2.8.0+cu128, transformers 4.55.4, numpy 2.3.3",
+    "gpu": "One NVIDIA H200 (141 GB), bf16 autocast",
+    "unit_notes": {
+      "stride_512": "Evaluation unit is the non-overlapping 512-byte window. A 2048-byte encoder input still reports accuracy at that 512-byte stride (overlapping windows).",
+      "aperture_16.9KB": "16.9 KB aperture = mean of the window and its 16 neighbours either side = radius 16 in scripts/combine.py --context.",
+      "val_seed": "--val-seed pins the train/validation program partition. Early wide runs (r4, r6) omit it; the protocol was introduced before r7/r8/r9. Replaying an archived args.json keeps val_seed omitted when it is omitted."
+    },
+    "probability_archive": {
+      "filename": "BinProv-probs-20260903.tar",
+      "sha256": "aeb1de809b6e1ad36145633b14073a483b5c9d078047758c2293b470125e4434",
+      "files": 45,
+      "verified": "2026-09-05"
+    },
+    "verified_tables": "reports/tables/best"
+  },
+  "results_dir": "results/best",
+  "corpus_dir": "data/corpus/binkit_x86_64",
+  "split_evidence": "reports/tables/split_programs.txt",
+  "checkpoint_paths": {
+    "mlm512": {
+      "archived": "checkpoints/binkit_x86_64/mlm",
+      "fresh": "results/best/ckpt/mlm512",
+      "description": "512-byte MLM pre-training (paper \u00a73.2). Init for every narrow run and the warm start for the 2048-byte continued pre-training."
+    },
+    "mlm2048": {
+      "archived": "checkpoints/binkit_x86_64/mlm2048",
+      "fresh": "results/best/ckpt/mlm2048",
+      "description": "2048-byte MLM by continued pre-training from mlm512. From-scratch pre-training was rejected because it did not converge within the tested budget."
+    }
+  },
+  "runs": {
+    "r4_ctx2048_dense": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r4_ctx2048_dense/args.json",
+      "archived_result": "reports/runs/best/r4_ctx2048_dense/result.json"
+    },
+    "r6_dense2048_seed7": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r6_dense2048_seed7/args.json",
+      "archived_result": "reports/runs/best/r6_dense2048_seed7/result.json"
+    },
+    "r6_dense2048_seed13": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r6_dense2048_seed13/args.json",
+      "archived_result": "reports/runs/best/r6_dense2048_seed13/result.json"
+    },
+    "r6_dense2048_seed29": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r6_dense2048_seed29/args.json",
+      "archived_result": "reports/runs/best/r6_dense2048_seed29/result.json"
+    },
+    "r7_wide2048_seed7": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r7_wide2048_seed7/args.json",
+      "archived_result": "reports/runs/best/r7_wide2048_seed7/result.json"
+    },
+    "r7_wide2048_seed13": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r7_wide2048_seed13/args.json",
+      "archived_result": "reports/runs/best/r7_wide2048_seed13/result.json"
+    },
+    "r7_wide2048_seed29": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r7_wide2048_seed29/args.json",
+      "archived_result": "reports/runs/best/r7_wide2048_seed29/result.json"
+    },
+    "r9_opt4_base_seed7": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r9_opt4_base_seed7/args.json",
+      "archived_result": "reports/runs/best/r9_opt4_base_seed7/result.json"
+    },
+    "r9_opt4_base_seed13": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r9_opt4_base_seed13/args.json",
+      "archived_result": "reports/runs/best/r9_opt4_base_seed13/result.json"
+    },
+    "r9_opt4_base_seed29": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r9_opt4_base_seed29/args.json",
+      "archived_result": "reports/runs/best/r9_opt4_base_seed29/result.json"
+    },
+    "r9_opt4_wide_seed7": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r9_opt4_wide_seed7/args.json",
+      "archived_result": "reports/runs/best/r9_opt4_wide_seed7/result.json"
+    },
+    "r9_opt4_wide_seed13": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r9_opt4_wide_seed13/args.json",
+      "archived_result": "reports/runs/best/r9_opt4_wide_seed13/result.json"
+    },
+    "r9_opt4_wide_seed29": {
+      "script": "experiment.py",
+      "archived_args": "reports/runs/best/r9_opt4_wide_seed29/args.json",
+      "archived_result": "reports/runs/best/r9_opt4_wide_seed29/result.json"
+    }
+  },
+  "prerequisites": {
+    "corpus": {
+      "description": "BinKit x86_64 corpus packed from .text sections; needed by every phase.",
+      "meta_file": "data/corpus/binkit_x86_64/meta.json",
+      "fetch_command": [
+        "bash",
+        "scripts/fetch_binkit.sh",
+        "normal"
+      ],
+      "build_command": [
+        "python",
+        "scripts/build_corpus.py",
+        "--root",
+        "data/binkit/normal",
+        "--out",
+        "data/corpus/binkit_x86_64",
+        "--arch",
+        "x86_64",
+        "--compiler",
+        "gcc",
+        "clang",
+        "--opt",
+        "O0",
+        "O1",
+        "O2",
+        "O3",
+        "--extra",
+        "normal",
+        "--workers",
+        "8",
+        "--yes"
+      ]
+    },
+    "mlm512": {
+      "description": "512-byte MLM pre-training. Exact args from reports/runs/best/mlm512/pretrain_args.json (replayed; fresh output only).",
+      "script": "pretrain_mlm.py",
+      "archived_args": "reports/runs/best/mlm512/pretrain_args.json",
+      "outputs": [
+        "results/best/ckpt/mlm512"
+      ]
+    },
+    "mlm2048": {
+      "description": "2048-byte MLM by continued pre-training from mlm512. {corpus}, {mlm512}, and {mlm2048} are substituted by the runner.",
+      "script": "pretrain_mlm.py",
+      "outputs": [
+        "results/best/ckpt/mlm2048"
+      ],
+      "command": [
+        "python",
+        "scripts/pretrain_mlm.py",
+        "--corpus",
+        "{corpus}",
+        "--out",
+        "{mlm2048}",
+        "--seq-bytes",
+        "2048",
+        "--init-from",
+        "{mlm512}",
+        "--pos-extend",
+        "tile",
+        "--split-name",
+        "train",
+        "--epochs",
+        "10",
+        "--batch-size",
+        "64",
+        "--workers",
+        "6",
+        "--save-every-epoch"
+      ]
+    }
+  },
+  "groups": {
+    "o2o3_7wide_512B": {
+      "description": "7-wide-run ensemble, O2/O3, scored at the 512-byte target stride (sequence level)",
+      "unit": "sequence-level accuracy at 512 B stride",
+      "kind": "ensemble",
+      "context": [
+        0
+      ],
+      "binary_vote": true,
+      "expected_accuracy": 0.751,
+      "also_reports": [
+        {
+          "label": "same 7 runs, 16.9 KB aperture",
+          "value": 0.811,
+          "group": "o2o3_7wide_16.9KB"
+        },
+        {
+          "label": "same 7 runs, binary-level majority vote",
+          "value": 0.9149
+        }
+      ],
+      "same_runs_as": "o2o3_7wide_16.9KB",
+      "runs": [
+        "r4_ctx2048_dense",
+        "r6_dense2048_seed7",
+        "r6_dense2048_seed13",
+        "r6_dense2048_seed29",
+        "r7_wide2048_seed7",
+        "r7_wide2048_seed13",
+        "r7_wide2048_seed29"
+      ],
+      "membership_evidence": "Exact 7-member recipe: r4_ctx2048_dense (seed 1234) + r6_dense2048_seed{7,13,29} + r7_wide2048_seed{7,13,29}. All use a 2048-byte encoder at stride 512; r4/r6 start from the tiled 512-byte MLM and r7 starts from the continued 2048-byte MLM."
+    },
+    "o2o3_7wide_16.9KB": {
+      "description": "Same 7-wide-run ensemble with a 16.9 KB inference aperture",
+      "unit": "sequence-level accuracy, mean over 33 neighbouring 512 B windows (radius 16)",
+      "kind": "ensemble",
+      "context": [
+        16
+      ],
+      "binary_vote": true,
+      "expected_accuracy": 0.811,
+      "same_runs_as": "o2o3_7wide_512B",
+      "runs": [
+        "r4_ctx2048_dense",
+        "r6_dense2048_seed7",
+        "r6_dense2048_seed13",
+        "r6_dense2048_seed29",
+        "r7_wide2048_seed7",
+        "r7_wide2048_seed13",
+        "r7_wide2048_seed29"
+      ]
+    },
+    "o2o3_pretrained_wide_mean": {
+      "description": "Mean per-window accuracy of the 2048-byte PRETRAINED wide encoder on O2/O3, 3 seeds",
+      "unit": "per-window accuracy at the 512 B metric (encoder input 2048 B)",
+      "kind": "mean",
+      "expected_accuracy": 0.7198,
+      "expected_sd": 0.0068,
+      "subset_runs_of": "o2o3_7wide_512B",
+      "note": "Three seeds only (seed 1234 is NOT in this mean: r4/r6 start from the 512-byte MLM, not from mlm2048). Comparison control: pinned-partition 512-byte baseline mean 68.61% (r1_base + r8_base_pinned_seed{7,13,29}, archived only).",
+      "runs": [
+        "r7_wide2048_seed7",
+        "r7_wide2048_seed13",
+        "r7_wide2048_seed29"
+      ]
+    },
+    "o2o3_19run_binary": {
+      "description": "Archived 19-run O2/O3 binary-level majority-vote ensemble (93.09%)",
+      "unit": "binary-level accuracy, majority vote over all windows per binary",
+      "kind": "archived_no_recipe",
+      "expected_accuracy": 0.9309,
+      "reproducible": false,
+      "note": "The archive reports 93.09%, but does not record the exact 19-member ensemble. Reproduction needs both the precise member list and their probabilities or checkpoints; the probability archive alone does not identify the original selection."
+    },
+    "opt4_6run_16.9KB": {
+      "description": "6-run ensemble (3 narrow + 3 wide) on the 4-way task with a 16.9 KB aperture",
+      "unit": "sequence-level accuracy, 4-class, mean over 33 neighbouring 512 B windows",
+      "kind": "ensemble",
+      "context": [
+        16
+      ],
+      "binary_vote": true,
+      "expected_accuracy": 0.8762,
+      "also_reports": [
+        {
+          "label": "binary-level majority vote of the same 6 runs",
+          "value": 0.9441
+        }
+      ],
+      "runs": [
+        "r9_opt4_base_seed7",
+        "r9_opt4_base_seed13",
+        "r9_opt4_base_seed29",
+        "r9_opt4_wide_seed7",
+        "r9_opt4_wide_seed13",
+        "r9_opt4_wide_seed29"
+      ]
+    },
+    "opt4_3wide_binary": {
+      "description": "Binary-level vote over just the 3 wide opt4 runs",
+      "unit": "binary-level accuracy, majority vote",
+      "kind": "ensemble",
+      "context": [
+        0
+      ],
+      "binary_vote": true,
+      "expected_accuracy": 0.9521,
+      "subset_runs_of": "opt4_6run_16.9KB",
+      "runs": [
+        "r9_opt4_wide_seed7",
+        "r9_opt4_wide_seed13",
+        "r9_opt4_wide_seed29"
+      ]
+    }
+  }
+}

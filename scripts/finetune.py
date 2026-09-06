@@ -358,7 +358,7 @@ def main() -> int:
             attn = batch["attention_mask"].to(device, non_blocking=True)
             types = batch["token_type_ids"].to(device, non_blocking=True)
             labels = batch["labels"].to(device, non_blocking=True)
-            with torch.autocast("cuda", dtype=amp_dtype, enabled=amp_dtype is not None):
+            with torch.autocast(device.type, dtype=amp_dtype, enabled=amp_dtype is not None):
                 out = model(ids, attn, types, labels=labels)
             (out["loss"] / args.grad_accum).backward()
 

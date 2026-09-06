@@ -62,6 +62,23 @@ def parse_args():
 
     arch = ap.add_argument_group("architecture")
     arch.add_argument("--seq-bytes", type=int, default=512)
+    arch.add_argument(
+        "--init-from",
+        default=None,
+        help="an existing MLM checkpoint to continue from. Use it to adapt a "
+        "512-byte encoder to a longer --seq-bytes without paying for a full run "
+        "from scratch: the byte-level knowledge transfers unchanged and only the "
+        "position table has to grow.",
+    )
+    arch.add_argument(
+        "--pos-extend",
+        choices=["tile", "interp"],
+        default="tile",
+        help="how to grow the position table when --seq-bytes exceeds the "
+        "checkpoint's. 'tile' repeats the learned rows and preserves their local "
+        "structure; 'interp' performs substantially worse. Use 'tile' for the "
+        "released recipe.",
+    )
     arch.add_argument("--layers", type=int, default=12)
     arch.add_argument("--hidden", type=int, default=768)
     arch.add_argument("--heads", type=int, default=12)
@@ -189,6 +206,31 @@ def main() -> int:
         intermediate_size=args.intermediate,
     )
     model = build_mlm_model(cfg)
+    if args.init_from:
+        # Continued pre-training, used to adapt a 512-byte encoder to a wider
+        # sequence without paying for a full run from scratch. The byte-level
+        # knowledge transfers unchanged; only the position table has to grow, and
+        # it is *tiled* rather than interpolated -- interpolation makes adjacent
+        # positions nearly identical and measurably degrades the encoder (see
+        # BinProvForProvenance._resize_position_embeddings).
+        from binprov.model import BinProvForProvenance
+        from transformers import RobertaForMaskedLM
+
+        src = RobertaForMaskedLM.from_pretrained(str(args.init_from))
+        want = model.roberta.embeddings.position_embeddings.weight.shape[0]
+        state = BinProvForProvenance._resize_position_embeddings(
+            src.roberta.state_dict(), want, args.pos_extend
+        )
+        missing, unexpected = model.roberta.load_state_dict(state, strict=False)
+        # the LM head is small and its input distribution has not changed, so it
+        # carries over too when the shapes agree
+        head_missing, _ = model.lm_head.load_state_dict(src.lm_head.state_dict(), strict=False)
+        del src
+        print(f"  continued pre-training from {args.init_from} "
+              f"(position table {args.pos_extend}d to {want}); "
+              f"{len(missing)} encoder tensors missing, {len(unexpected)} unexpected")
+        if missing:
+            print(f"    missing: {missing[:5]}{' ...' if len(missing) > 5 else ''}")
     print(describe(model))
 
     device, amp_dtype = engine.pick_device(prefer_bf16=not args.fp32)
@@ -281,7 +323,7 @@ def main() -> int:
             types = batch["token_type_ids"].to(device, non_blocking=True)
             labels = batch["labels"].to(device, non_blocking=True)
 
-            with torch.autocast("cuda", dtype=amp_dtype, enabled=amp_dtype is not None):
+            with torch.autocast(device.type, dtype=amp_dtype, enabled=amp_dtype is not None):
                 out = model(
                     input_ids=ids, attention_mask=attn, token_type_ids=types, labels=labels
                 )
@@ -352,7 +394,7 @@ def evaluate_mlm(model, loader, device, amp_dtype) -> tuple[float, float]:
         attn = batch["attention_mask"].to(device)
         types = batch["token_type_ids"].to(device)
         labels = batch["labels"].to(device)
-        with torch.autocast("cuda", dtype=amp_dtype, enabled=amp_dtype is not None):
+        with torch.autocast(device.type, dtype=amp_dtype, enabled=amp_dtype is not None):
             out = model(input_ids=ids, attention_mask=attn, token_type_ids=types, labels=labels)
         total_loss += float(out.loss)
         n_batches += 1

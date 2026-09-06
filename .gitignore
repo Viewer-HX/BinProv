@@ -1,10 +1,12 @@
 # Datasets, corpora, checkpoints and raw run output. All large and reproducible
 # from the scripts, so none of them belong in git. The curated, small versions of
 # the results live in reports/ and ARE tracked.
-data/
-checkpoints/
-logs/
-results/
+# Anchored with a leading slash so they match only these top-level directories,
+# while curated evidence under reports/ remains tracked.
+/data/
+/checkpoints/
+/logs/
+/results/
 
 # The paper PDF. It is CC-BY 4.0, so redistributing it is permitted -- but the
 # repo links to the DOI instead of carrying a 1.2 MB copy. Delete this line if
@@ -20,8 +22,8 @@ venv/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# macOS
-.DS_Store
-
 # packaging output
 dist/
+
+# macOS
+.DS_Store

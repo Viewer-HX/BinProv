@@ -1,0 +1,20 @@
+{
+  "scheduler": "slurm",
+  "job_id": "9558937",
+  "job_name": "binprov-hop",
+  "partition": "contrib-gpuq",
+  "qos": "ksun",
+  "state": "COMPLETED",
+  "exit_code": "0:0",
+  "elapsed": "12:42:09",
+  "started": "2026-09-05T15:06:56-04:00",
+  "ended": "2026-09-06T03:49:05-04:00",
+  "resources": {
+    "nodes": 1,
+    "cpus": 8,
+    "memory": "64G",
+    "gpu": "a100.80gb",
+    "gpus": 1
+  },
+  "restarts": 0
+}

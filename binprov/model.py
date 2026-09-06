@@ -130,6 +130,98 @@ class MeanPool(nn.Module):
         return self.norm(F.gelu(self.proj(pooled)))
 
 
+
+class AttentionPool(nn.Module):
+    """Content-based attention pooling: weight a position by *what* is there.
+
+    :class:`BorderTaperedPool` weights a position by *where* it is, which makes
+    it a fixed weighted mean. That is the right prior for the border problem it
+    was written for, and the wrong one for O2/O3. The byte patterns that
+    separate the two levels -- a vectorised loop body, one copy of an unrolled
+    loop, a particular alignment pad -- occupy a handful of positions in a
+    512-byte window and are absent from the rest of it, so any weighted mean
+    dilutes the evidence by the fraction of the window that carries it.
+    Attention can concentrate on those positions instead.
+
+    ``heads > 1`` lets the head attend to several kinds of evidence at once
+    (say, a vector opcode in one head and a padding pattern in another).
+    """
+
+    def __init__(self, hidden_size: int, heads: int = 4):
+        super().__init__()
+        self.heads = heads
+        self.score = nn.Linear(hidden_size, heads)
+        self.proj = nn.Linear(hidden_size * heads, hidden_size)
+        self.norm = nn.LayerNorm(hidden_size)
+
+    def forward(self, hidden: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        scores = self.score(hidden)  # (B, T, heads)
+        keep = attention_mask.unsqueeze(-1) == 0
+        scores = scores.masked_fill(keep, torch.finfo(scores.dtype).min)
+        weights = scores.softmax(dim=1)  # over positions
+        pooled = torch.einsum("bth,btd->bhd", weights, hidden).flatten(1)
+        return self.norm(F.gelu(self.proj(pooled)))
+
+
+class MaxPool(nn.Module):
+    """Per-dimension max over positions -- the hard version of AttentionPool.
+
+    Cheaper and with no parameters of its own in the aggregation step, at the
+    cost of committing to one position per feature dimension.
+    """
+
+    def __init__(self, hidden_size: int):
+        super().__init__()
+        self.proj = nn.Linear(hidden_size, hidden_size)
+        self.norm = nn.LayerNorm(hidden_size)
+
+    def forward(self, hidden: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        keep = attention_mask.unsqueeze(-1) == 0
+        pooled = hidden.masked_fill(keep, torch.finfo(hidden.dtype).min).max(dim=1).values
+        return self.norm(F.gelu(self.proj(pooled)))
+
+
+class MILHead(nn.Module):
+    """Per-token classifier plus a smooth max over positions (returns logits).
+
+    The multiple-instance view of the task: a window is O3 if it *contains* an
+    O3 fingerprint, so the window score should be a max over per-token scores
+    rather than a score computed from an average of tokens. Pooling after the
+    classifier rather than before it is the whole point -- it keeps a single
+    strongly-O3 position from being averaged into 500 neutral ones.
+
+    ``logsumexp`` is the differentiable max: ``tau -> 0`` recovers a hard max,
+    large ``tau`` approaches the mean, so one module spans both ends and ``tau``
+    is a knob rather than a commitment. ``log n`` is subtracted so the result is
+    a log-*mean*-exp and therefore invariant to how many valid tokens a window
+    has -- without it a short window would score systematically lower on every
+    class, which is exactly the confound that makes padded short functions look
+    hard.
+    """
+
+    def __init__(self, hidden_size: int, num_labels: int, *, tau: float = 1.0, dropout: float = 0.1):
+        super().__init__()
+        self.proj = nn.Linear(hidden_size, hidden_size)
+        self.norm = nn.LayerNorm(hidden_size)
+        self.drop = nn.Dropout(dropout)
+        self.token_clf = nn.Linear(hidden_size, num_labels)
+        self.tau = tau
+        nn.init.normal_(self.token_clf.weight, std=0.02)
+        nn.init.zeros_(self.token_clf.bias)
+
+    def forward(self, hidden: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        h = self.norm(F.gelu(self.proj(hidden)))
+        tok = self.token_clf(self.drop(h))  # (B, T, C)
+        keep = attention_mask.unsqueeze(-1) == 0
+        tok = tok.masked_fill(keep, torch.finfo(tok.dtype).min)
+        n = attention_mask.sum(dim=1, keepdim=True).clamp(min=1).to(tok.dtype)
+        return self.tau * (torch.logsumexp(tok / self.tau, dim=1) - torch.log(n))
+
+    def token_logits(self, hidden: torch.Tensor) -> torch.Tensor:
+        """Per-position class scores, for locating *where* the evidence is."""
+        return self.token_clf(self.norm(F.gelu(self.proj(hidden))))
+
+
 class BinProvForProvenance(nn.Module):
     """Encoder + classifier, i.e. Eq. (2) of the paper.
 
@@ -144,24 +236,45 @@ class BinProvForProvenance(nn.Module):
         pool: str = "border",
         classifier_dropout: float = 0.1,
         taper: int = 32,
+        pool_heads: int = 4,
+        mil_tau: float = 1.0,
+        label_smoothing: float = 0.0,
     ):
         super().__init__()
         self.cfg = cfg
         self.num_labels = num_labels
         self.pool_kind = pool
+        self.pool_heads = pool_heads
+        self.mil_tau = mil_tau
+        self.label_smoothing = label_smoothing
         self.encoder = RobertaModel(cfg.to_roberta(), add_pooling_layer=False)
+        # A "mil" head produces class logits itself, so there is no pooled
+        # vector for a separate classifier to consume; `pools_to_logits` records
+        # which of the two shapes we are in.
+        self.pools_to_logits = pool == "mil"
         if pool == "border":
             self.pool = BorderTaperedPool(cfg.seq_tokens, cfg.hidden_size, taper=taper)
         elif pool == "mean":
             self.pool = MeanPool(cfg.hidden_size)
+        elif pool == "attn":
+            self.pool = AttentionPool(cfg.hidden_size, heads=pool_heads)
+        elif pool == "max":
+            self.pool = MaxPool(cfg.hidden_size)
+        elif pool == "mil":
+            self.pool = MILHead(
+                cfg.hidden_size, num_labels, tau=mil_tau, dropout=classifier_dropout
+            )
         elif pool == "cls":
             self.pool = None
         else:
-            raise ValueError(f"unknown pool {pool!r} (border|mean|cls)")
+            raise ValueError(f"unknown pool {pool!r} (border|mean|attn|max|mil|cls)")
         self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Linear(cfg.hidden_size, num_labels)
-        nn.init.normal_(self.classifier.weight, std=0.02)
-        nn.init.zeros_(self.classifier.bias)
+        if self.pools_to_logits:
+            self.classifier = nn.Identity()
+        else:
+            self.classifier = nn.Linear(cfg.hidden_size, num_labels)
+            nn.init.normal_(self.classifier.weight, std=0.02)
+            nn.init.zeros_(self.classifier.bias)
 
     def forward(
         self,
@@ -176,16 +289,74 @@ class BinProvForProvenance(nn.Module):
             token_type_ids=token_type_ids,
         )
         hidden = out.last_hidden_state  # E_final, shape (B, T, H)
-        pooled = hidden[:, 0] if self.pool is None else self.pool(hidden, attention_mask)
-        logits = self.classifier(self.dropout(pooled))
+        if self.pools_to_logits:
+            logits = self.pool(hidden, attention_mask)
+        else:
+            pooled = hidden[:, 0] if self.pool is None else self.pool(hidden, attention_mask)
+            logits = self.classifier(self.dropout(pooled))
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(logits.float(), labels)
+            loss = F.cross_entropy(
+                logits.float(), labels, label_smoothing=self.label_smoothing
+            )
         return {"loss": loss, "logits": logits}
 
     # -- checkpointing -----------------------------------------------------
 
-    def load_encoder_from_mlm(self, mlm_dir: str | Path, *, strict: bool = False) -> list[str]:
+    @staticmethod
+    def _resize_position_embeddings(state: dict, want: int, how: str = "tile") -> dict:
+        """Extend a pre-trained absolute position table to a longer sequence.
+
+        The MLM checkpoint learned 516 position embeddings because the paper's
+        sequence is 512 bytes. A longer-sequence encoder needs more, and the extra
+        rows have to come from somewhere. Two ways, and the difference is not
+        cosmetic — measured on the O2/O3 task, ``interp`` costs 5 points against
+        the 512-byte baseline while ``tile`` does not:
+
+        ``interp``
+            Linear interpolation, the move that extends a vision transformer to a
+            larger image. It preserves the table's global *shape* and destroys its
+            local structure: stretching 2x makes each adjacent pair of positions
+            nearly identical. For an image patch grid that is harmless. For a byte
+            encoder whose pre-training learned that neighbouring positions differ
+            — instruction boundaries, alignment padding — it is not, and it shows
+            up as an encoder that will not fit the training set any more.
+
+        ``tile``
+            Position ``k`` reuses the learned row ``k mod (have - 1)``. Local
+            structure is preserved exactly; what is lost is the ability to tell
+            absolute position 100 from position 614. For this task that is the
+            cheaper thing to give up, since a provenance cue means the same thing
+            wherever in the window it appears.
+
+        Rows are handled from index 1 up, because HF derives RoBERTa position ids
+        as ``padding_idx + 1 + i`` and so never uses row 0.
+        """
+        key = "embeddings.position_embeddings.weight"
+        if key not in state or state[key].shape[0] == want:
+            return state
+        have = state[key]
+        head, tail = have[:1], have[1:]
+        if how == "interp":
+            grown = F.interpolate(
+                tail.T.unsqueeze(0).float(), size=want - 1, mode="linear", align_corners=True
+            ).squeeze(0).T.to(have.dtype)
+        elif how == "tile":
+            reps = -(-(want - 1) // tail.shape[0])
+            grown = tail.repeat(reps, 1)[: want - 1]
+        else:
+            raise ValueError(f"unknown position extension {how!r} (tile|interp)")
+        state = dict(state)
+        state[key] = torch.cat([head, grown], dim=0)
+        # position_ids is a plain arange buffer; regenerate rather than stretch
+        for k in list(state):
+            if k.endswith("embeddings.position_ids") or k.endswith("embeddings.token_type_ids"):
+                state.pop(k)
+        return state
+
+    def load_encoder_from_mlm(
+        self, mlm_dir: str | Path, *, strict: bool = False, pos_extend: str = "tile"
+    ) -> list[str]:
         """Warm-start the encoder from an MLM checkpoint (the transfer step).
 
         Returns the list of encoder parameters that were *not* found, which
@@ -194,9 +365,12 @@ class BinProvForProvenance(nn.Module):
         training from scratch.
         """
         mlm = RobertaForMaskedLM.from_pretrained(str(mlm_dir))
-        missing, unexpected = self.encoder.load_state_dict(
-            mlm.roberta.state_dict(), strict=strict
+        state = self._resize_position_embeddings(
+            mlm.roberta.state_dict(),
+            self.encoder.embeddings.position_embeddings.weight.shape[0],
+            pos_extend,
         )
+        missing, unexpected = self.encoder.load_state_dict(state, strict=strict)
         del mlm
         if strict and (missing or unexpected):
             raise RuntimeError(f"encoder mismatch: missing={missing} unexpected={unexpected}")
@@ -212,6 +386,8 @@ class BinProvForProvenance(nn.Module):
                 {
                     "num_labels": self.num_labels,
                     "pool": self.pool_kind,
+                    "pool_heads": self.pool_heads,
+                    "mil_tau": self.mil_tau,
                     **(extra or {}),
                 },
                 indent=2,
@@ -224,7 +400,13 @@ class BinProvForProvenance(nn.Module):
         d = Path(ckpt_dir)
         cfg = BinProvConfig.load(d / "binprov_config.json")
         head = json.loads((d / "head.json").read_text())
-        model = cls(cfg, head["num_labels"], pool=head.get("pool", "border"))
+        model = cls(
+            cfg,
+            head["num_labels"],
+            pool=head.get("pool", "border"),
+            pool_heads=head.get("pool_heads", 4),
+            mil_tau=head.get("mil_tau", 1.0),
+        )
         state = torch.load(d / "model.pt", map_location=map_location, weights_only=True)
         model.load_state_dict(state)
         return model, head

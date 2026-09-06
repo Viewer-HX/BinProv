@@ -402,6 +402,169 @@ def test_zero_bytes_are_not_padding():
     assert attn[1, 10:].sum() == 0
 
 
+# ---------------------------------------------------------------------------
+# invariants used by the selected best recipes
+# ---------------------------------------------------------------------------
+
+
+def test_position_extension_tile_preserves_local_structure():
+    """Tiling must keep neighbouring rows distinct; interpolation must not be used
+    by default. Interpolating the position table cost 5 points because
+    it makes adjacent positions nearly identical."""
+    import torch
+
+    from binprov.model import BinProvForProvenance
+
+    have = torch.arange(516 * 4, dtype=torch.float32).reshape(516, 4)
+    key = "embeddings.position_embeddings.weight"
+    tiled = BinProvForProvenance._resize_position_embeddings(
+        {key: have.clone()}, 1030, "tile"
+    )[key]
+    assert tiled.shape == (1030, 4)
+    # row 0 is never used by HF's position ids and must be carried over verbatim
+    assert torch.equal(tiled[0], have[0])
+    # local step size is preserved exactly, everywhere including past the wrap
+    assert torch.equal(tiled[3] - tiled[2], have[3] - have[2])
+    assert torch.equal(tiled[516], have[1])
+    interp = BinProvForProvenance._resize_position_embeddings(
+        {key: have.clone()}, 1030, "interp"
+    )[key]
+    # interpolation halves the local step -- this is the damage it does
+    assert float((interp[3] - interp[2]).mean()) < float((have[3] - have[2]).mean())
+
+
+def test_pairwise_loss_ignores_program_constant_offsets():
+    """The whole point of the pairwise loss: a term that takes the same value on
+    both members of a pair cannot change it (binprov/pairs.py)."""
+    import torch
+
+    from binprov.pairs import pairwise_margin_loss
+
+    labels = torch.tensor([0, 1, 2, 3])  # a gcc pair then a clang pair
+    logits = torch.tensor(
+        [[3.0, -3, 0, 0], [-3.0, 3, 0, 0], [0, 0, 3.0, -3], [0, 0, -3.0, 3]]
+    )
+    ordered = float(pairwise_margin_loss(logits, labels))
+    shifted = logits.clone()
+    shifted[0] += torch.tensor([5.0, 5, 0, 0])
+    shifted[1] += torch.tensor([5.0, 5, 0, 0])
+    assert abs(float(pairwise_margin_loss(shifted, labels)) - ordered) < 1e-6
+    inverted = logits[[1, 0, 3, 2]]
+    assert float(pairwise_margin_loss(inverted, labels)) > ordered + 1.0
+
+
+def test_jitter_and_context_windows_stay_inside_their_binary():
+    """A jittered or widened window that ran past the end of its binary would
+    take bytes from the next one and carry the wrong label, silently."""
+    from binprov.data import ContextWindowDataset, JitteredByteSequenceDataset
+
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        corpus = _toy_corpus(tmp)
+        index = corpus.sequences(seq_len=512, level="binary")
+        labels = np.zeros(len(index), dtype=np.int64)
+        starts = {r.bid: r.text_off for r in corpus.records}
+        ends = {r.bid: r.text_off + r.text_len for r in corpus.records}
+
+        for ds in (
+            JitteredByteSequenceDataset(corpus, index, labels, jitter=-1, seed=1),
+            JitteredByteSequenceDataset(corpus, index, labels, jitter=99999, seed=2),
+            ContextWindowDataset(corpus, index, labels, length=1024),
+        ):
+            for i in range(len(index)):
+                chunk, _, _ = ds[i]
+                bid = int(index.bid[i])
+                assert len(chunk) > 0
+                # the window must fit within its own binary's span
+                assert len(chunk) <= ends[bid] - starts[bid]
+                # and the bytes must be ones that binary actually contains
+                own = np.asarray(
+                    corpus.text[starts[bid]:ends[bid]], dtype=np.uint8
+                ).tobytes()
+                assert chunk.tobytes() in own
+    finally:
+        shutil.rmtree(tmp)
+
+
+def test_per_binary_cap_never_touches_the_eval_split():
+    """Regression test. --max-seqs-per-binary applied to the test split silently
+    changes the test-set composition, which makes a run's accuracy incomparable
+    while still looking like the same metric. It bit once; it must not again."""
+    import types
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from importlib.machinery import SourceFileLoader
+
+    ex = SourceFileLoader("_ex", str(
+        Path(__file__).resolve().parent.parent / "scripts" / "experiment.py"
+    )).load_module()
+    from binprov.provenance import get_task
+
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        corpus = _toy_corpus(tmp)
+        args = types.SimpleNamespace(
+            arch=None, extra=None, compiler=None, version=None, stride=None,
+            max_seqs_per_binary=1,
+        )
+        task = get_task("compiler")
+        bids = [r.bid for r in corpus.records]
+        uncapped, _ = ex.build_index(corpus, task, bids, args, 512, is_train=False)
+        capped, _ = ex.build_index(corpus, task, bids, args, 512, is_train=True)
+        assert len(capped) < len(uncapped), "the cap should bind on training"
+        assert len(capped) == len(bids), "one window per binary when the cap is 1"
+        # evaluation must be the full cut, cap or no cap
+        plain = corpus.sequences(seq_len=512, level="binary", bids=bids)
+        assert len(uncapped) == len(plain)
+        # and build_index must honour `bids` -- passing a subset must shrink it
+        subset, _ = ex.build_index(corpus, task, bids[:1], args, 512, is_train=False)
+        assert 0 < len(subset) < len(uncapped)
+    finally:
+        shutil.rmtree(tmp)
+
+
+def test_bootstrap_over_programs_is_wider_than_over_windows():
+    """Windows from one program have correlated errors, so resampling programs
+    must give a materially wider interval. Finding 12 rests on this."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from importlib.machinery import SourceFileLoader
+
+    cb = SourceFileLoader("_cb", str(
+        Path(__file__).resolve().parent.parent / "scripts" / "combine.py"
+    )).load_module()
+
+    rng = np.random.default_rng(0)
+    n_prog, per = 40, 300
+    prog = np.repeat(np.arange(n_prog), per)
+    # each program is either mostly-right or mostly-wrong: correlated within, as
+    # real per-program accuracy is
+    skill = rng.uniform(0.3, 0.95, n_prog)
+    true = np.zeros(n_prog * per, dtype=np.int64)
+    correct = rng.random(n_prog * per) < skill[prog]
+    prob = np.zeros((n_prog * per, 2))
+    prob[np.arange(len(true)), np.where(correct, 0, 1)] = 1.0
+
+    lo_p, hi_p, npg = cb.bootstrap_ci(prob, true, prog, n_boot=800, seed=0)
+    assert npg == n_prog
+    lo_w, hi_w, _ = cb.bootstrap_ci(prob, true, np.arange(len(true)), n_boot=800, seed=0)
+    assert (hi_p - lo_p) > 3 * (hi_w - lo_w)
+
+    # a model compared against itself must have a paired interval containing 0
+    lo, hi, _ = cb.bootstrap_paired_diff(prob, prob, true, prog, n_boot=400, seed=0)
+    assert lo == 0.0 and hi == 0.0
+
+
+def test_factorized_task_marginalizes_onto_its_coarse_classes():
+    from binprov.provenance import get_task
+
+    fine = get_task("opt_o2o3_x")
+    assert fine.scored_classes == ("O2", "O3")
+    assert len(fine.marginal_map) == fine.num_labels
+    for i, cls in enumerate(fine.classes):
+        # gcc_O3 and clang_O3 must both map onto O3
+        assert fine.scored_classes[fine.marginal_map[i]] == cls.split("_")[1]
+
+
 def main() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = []

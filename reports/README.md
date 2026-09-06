@@ -1,61 +1,33 @@
-# Experiment artifacts
+# Curated result evidence
 
-This directory stores compact artifacts used to validate the reconstructed
-BinProv pipeline. Raw datasets, model weights, and generated `results/`
-directories are excluded from version control because they are large and can be
-recreated from the documented commands.
+This directory contains only the compact evidence needed to inspect and
+reproduce the selected best recipes. Raw datasets, checkpoints, probabilities,
+temporary logs, and the broader experiment history are excluded from Git.
 
-```text
-tables/    evaluation output in Markdown and JSON
-figures/   training and validation curves
-runs/      launch arguments, JSONL logs, baselines, and final metrics
-```
+## Layout
 
-## Tables
-
-| Artifact | Description |
+| path | contents |
 |---|---|
-| `binkit_x86_64.md` / `.json` | Main x86_64 evaluation output |
-| `binkit_x86_64_fnctx.md` / `.json` | Function-context evaluation output |
-| `o2o3_4arch_<arch>.md` / `.json` | Per-architecture evaluation output |
+| `tables/best/` | independently recomputed headline tables |
+| `tables/split_programs.txt` | exact program-grouped test and validation split |
+| `runs/best/` | exact `args.json` and `result.json` for the 13 ensemble members, plus the MLM512 recipe |
+| `runs/release/opt4_wide_seed29/` | fresh A100 run parameters, metrics, scheduler record, pipeline status, and fine-tuning trace |
 
-The verified measurements highlighted in
-[`../docs/RESULTS.md`](../docs/RESULTS.md) are derived from these structured
-outputs.
+The machine-readable recipe map is
+[`configs/best_results.json`](../configs/best_results.json), and the main reader
+guide is [`docs/BEST_RESULTS.md`](../docs/BEST_RESULTS.md).
 
-## Figures
+The released 335 MiB model is hosted at
+[XuViewer/binprov](https://huggingface.co/XuViewer/binprov). A local export is
+written under gitignored `results/hopper_release/`; model weights are never
+committed to this repository.
 
-| Artifact | Description |
-|---|---|
-| `mlm_curve.png` | x86_64 MLM training curve and unigram reference |
-| `mlm_curve_4arch.png` | Pooled four-architecture MLM training curve |
-| `control_warm_vs_scratch.png` | Equal-budget MLM warm start and random initialization control |
-
-Regenerate the figures from the stored logs:
+To replay a recipe, first inspect the mutation-free plan:
 
 ```bash
-python scripts/plot_training.py \
-    --log "x86_64=reports/runs/binkit_x86_64__mlm" \
-    --out reports/figures/mlm_curve.png
-
-python scripts/plot_training.py \
-    --log "four architectures=reports/runs/binkit_4arch__mlm" \
-    --out reports/figures/mlm_curve_4arch.png
-
-python scripts/plot_training.py \
-    --log "warm start=reports/runs/binkit_x86_64__ctrl_warm" \
-    --log "random init=reports/runs/binkit_x86_64__ctrl_scratch" \
-    --out reports/figures/control_warm_vs_scratch.png
+python scripts/run_best.py --list
+python scripts/run_best.py --group opt4_6run_16.9KB
 ```
 
-## Run records
-
-Each run directory is named `<corpus>__<task>` and may contain:
-
-- `train_log.jsonl`: one structured record per logged training step;
-- `pretrain_args.json` or `finetune_args.json`: the exact launch arguments;
-- `baseline.json`: the unigram reference for MLM runs;
-- `finetune_result.json`: final task metrics.
-
-These files make the published configuration and selected results auditable
-without distributing checkpoint weights.
+Pass `--execute` only after preparing the BinKit corpus as described in the
+repository README.

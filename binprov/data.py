@@ -66,6 +66,181 @@ class ByteSequenceDataset(Dataset):
         return chunk, label, i
 
 
+
+class JitteredByteSequenceDataset(ByteSequenceDataset):
+    """Training sequences whose window start is re-drawn every time they are read.
+
+    Motivation: a non-overlapping cut (§3.1) gives a *fixed* set of windows, so
+    an N-epoch fine-tune shows the model the identical byte strings N times. The
+    corpus holds 211 MB of ``.text`` but only 315,710 distinct 512-byte windows,
+    and where a window happens to begin is an artefact of the cut, not a
+    property of the code. Re-drawing the start turns those 315,710 samples into
+    a continuum, and it also stops the model keying on "byte 0 of a window is
+    usually an instruction boundary" -- which is true of the training cut and
+    only accidentally true at deployment.
+
+    ``jitter`` is the maximum shift in bytes. ``jitter < 0`` means "start
+    anywhere in this binary's ``.text``", the strongest form. The window is
+    always clamped to stay inside the binary it came from, so a jittered sample
+    never mixes two binaries and its label stays correct.
+    """
+
+    def __init__(
+        self,
+        corpus: Corpus,
+        index: SequenceIndex,
+        labels: np.ndarray | None = None,
+        *,
+        jitter: int = 256,
+        seed: int = 0,
+    ):
+        super().__init__(corpus, index, labels)
+        self.jitter = jitter
+        self._rng = np.random.default_rng(seed)
+        # Per-sequence bounds on the window start, so the clamp needs no lookup
+        # into corpus.records at __getitem__ time (which runs in a worker).
+        off = np.asarray([r.text_off for r in corpus.records], dtype=np.int64)
+        ln = np.asarray([r.text_len for r in corpus.records], dtype=np.int64)
+        bid = index.bid.astype(np.int64)
+        self._lo = off[bid]
+        self._hi = np.maximum(off[bid], off[bid] + ln[bid] - index.length.astype(np.int64))
+
+    def __getitem__(self, i: int):
+        start = int(self.index.start[i])
+        n = int(self.index.length[i])
+        lo, hi = int(self._lo[i]), int(self._hi[i])
+        if self.jitter < 0:
+            start = int(self._rng.integers(lo, hi + 1)) if hi > lo else lo
+        elif self.jitter > 0:
+            shift = int(self._rng.integers(-self.jitter, self.jitter + 1))
+            start = min(max(start + shift, lo), hi)
+        chunk = np.asarray(self.text[start : start + n], dtype=np.uint8)
+        label = -1 if self.labels is None else int(self.labels[i])
+        return chunk, label, i
+
+
+
+class ContextWindowDataset(ByteSequenceDataset):
+    """The paper's window set, each window widened to ``length`` centred bytes.
+
+    This exists to make a longer-input model *comparable*. Training on 2048-byte
+    sequences changes the unit being classified, so per-sequence accuracy at 2048
+    bytes and at 512 bytes are different metrics and must not be put in the same
+    column. Keeping the 512-byte index and only widening what the model reads
+    around each window fixes that: the row count, the labels and the voting
+    groups are identical to the baseline's, and the only thing that changed is
+    how much context the prediction had.
+
+    It is the same manoeuvre as ``--function-context``, and it carries the same
+    caveat: the widened window contains bytes the 512-byte window does not, so
+    this is not the paper's sequence level. Provenance is a property of the whole
+    binary, so those bytes share the label and this is not label leakage — but it
+    is a different, clearly-labelled operating point.
+    """
+
+    def __init__(self, corpus: Corpus, index: SequenceIndex, labels=None, *, length: int = 2048):
+        super().__init__(corpus, index, labels)
+        self.length = length
+        off = np.asarray([r.text_off for r in corpus.records], dtype=np.int64)
+        ln = np.asarray([r.text_len for r in corpus.records], dtype=np.int64)
+        bid = index.bid.astype(np.int64)
+        self._lo = off[bid]
+        self._hi = off[bid] + ln[bid]
+
+    def __getitem__(self, i: int):
+        start = int(self.index.start[i])
+        n = int(self.index.length[i])
+        lo, hi = int(self._lo[i]), int(self._hi[i])
+        want = min(self.length, hi - lo)
+        centre = start + n // 2
+        s = min(max(centre - want // 2, lo), max(lo, hi - want))
+        chunk = np.asarray(self.text[s : s + want], dtype=np.uint8)
+        label = -1 if self.labels is None else int(self.labels[i])
+        return chunk, label, i
+
+class MultiViewByteSequenceDataset(ByteSequenceDataset):
+    """One sequence, several views of it — the evaluation side of jitter.
+
+    Item ``i`` of this dataset is view ``i % n_views`` of sequence
+    ``i // n_views``, so a plain non-shuffled pass yields every view of every
+    sequence and the caller averages the ``n_views`` probability rows back down.
+    The ``positions`` field still carries ``i``, so :func:`engine.predict`
+    scatters correctly without knowing anything about views.
+
+    Two modes, kept separate because they differ in what information the
+    prediction is allowed to use:
+
+    ``crop``
+        Views are sub-windows *inside* the sequence's own bytes (length
+        ``seq_len - k*shift`` for view ``k``). Nothing outside the 512 bytes is
+        read, so an averaged prediction is still a sequence-level prediction and
+        is comparable to the paper's number.
+
+    ``shift``
+        Views slide the full-length window off the sequence's start by up to
+        ``span`` bytes, clamped to the binary. This reads bytes the sequence does
+        not contain, so it is *not* the paper's sequence level -- report it as
+        its own row, the way ``--function-context`` is.
+    """
+
+    def __init__(
+        self,
+        corpus: Corpus,
+        index: SequenceIndex,
+        labels: np.ndarray | None = None,
+        *,
+        mode: str = "crop",
+        n_views: int = 4,
+        span: int = 128,
+    ):
+        super().__init__(corpus, index, labels)
+        if mode not in ("crop", "shift"):
+            raise ValueError(f"mode must be 'crop' or 'shift', got {mode!r}")
+        if n_views < 1:
+            raise ValueError("n_views must be >= 1")
+        self.mode = mode
+        self.n_views = n_views
+        self.span = span
+        off = np.asarray([r.text_off for r in corpus.records], dtype=np.int64)
+        ln = np.asarray([r.text_len for r in corpus.records], dtype=np.int64)
+        bid = index.bid.astype(np.int64)
+        self._lo = off[bid]
+        self._hi = np.maximum(off[bid], off[bid] + ln[bid] - index.length.astype(np.int64))
+
+    def __len__(self) -> int:
+        return len(self.index) * self.n_views
+
+    def _offsets(self) -> list[int]:
+        """Signed shifts for the views, symmetric around 0 and including 0."""
+        if self.n_views == 1:
+            return [0]
+        half = self.n_views // 2
+        step = max(1, self.span // max(1, half))
+        out = [0]
+        for k in range(1, half + 1):
+            out.append(-k * step)
+            if len(out) < self.n_views:
+                out.append(k * step)
+        return out[: self.n_views]
+
+    def __getitem__(self, j: int):
+        i, view = divmod(j, self.n_views)
+        start = int(self.index.start[i])
+        n = int(self.index.length[i])
+        delta = self._offsets()[view]
+        if self.mode == "crop":
+            # keep the window inside its own bytes: trim from one end
+            trim = abs(delta)
+            if delta >= 0:
+                start, n = start + trim, max(16, n - trim)
+            else:
+                n = max(16, n - trim)
+        else:
+            start = min(max(start + delta, int(self._lo[i])), int(self._hi[i]))
+        chunk = np.asarray(self.text[start : start + n], dtype=np.uint8)
+        label = -1 if self.labels is None else int(self.labels[i])
+        return chunk, label, j
+
 class PairedByteSequenceDataset(ByteSequenceDataset):
     """Optionally splices two half-sequences from different binaries.
 

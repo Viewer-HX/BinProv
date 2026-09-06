@@ -32,14 +32,20 @@
 set -euo pipefail
 
 # --- Google Drive ids, taken from the BinKit README (paper-era datasets) ------
-declare -A GDRIVE_IDS=(
-  [normal]=1K9ef-OoRBr0X5u8g2mlnYqh9o1i6zFij
-  [sizeopt]=1QgwbEfd8vdzg5glNZFL7dg4l4hrkoWO3
-  [noinline]=1wt7GY-DDp8J_2zeBBVUrcfWIyerg_xLO
-  [pie]=1IfEbnS9RtHhVhW8oiqnE7G75uPej1FPx
-  [lto]=1Tsd-WNO_JDlEX0GylBOxsFjOPUmUyeGh
-  [obfus]=1H5k3pfJH9zN4anfxKi1WvNqTKmjVjUUU
-)
+# Implemented as a case function rather than an associative array: macOS still
+# ships bash 3.2, which has no `declare -A`.
+gdrive_id() {
+  case "$1" in
+    normal) echo 1K9ef-OoRBr0X5u8g2mlnYqh9o1i6zFij ;;
+    sizeopt) echo 1QgwbEfd8vdzg5glNZFL7dg4l4hrkoWO3 ;;
+    noinline) echo 1wt7GY-DDp8J_2zeBBVUrcfWIyerg_xLO ;;
+    pie) echo 1IfEbnS9RtHhVhW8oiqnE7G75uPej1FPx ;;
+    lto) echo 1Tsd-WNO_JDlEX0GylBOxsFjOPUmUyeGh ;;
+    obfus) echo 1H5k3pfJH9zN4anfxKi1WvNqTKmjVjUUU ;;
+    *) return 1 ;;
+  esac
+}
+DATASET_NAMES="normal sizeopt noinline pie lto obfus"
 
 DATA_ROOT="${DATA_ROOT:-$(cd "$(dirname "$0")/.." && pwd)/data/binkit}"
 # Toolchains to keep: the paper's four architectures, all optimization levels.
@@ -65,8 +71,8 @@ for arg in "$@"; do
   esac
 done
 
-if [[ -z "$NAME" || -z "${GDRIVE_IDS[$NAME]:-}" ]]; then
-  echo "usage: $0 {${!GDRIVE_IDS[*]}} [--list]" >&2
+if [[ -z "$NAME" ]] || ! gdrive_id "$NAME" >/dev/null; then
+  echo "usage: $0 {$DATASET_NAMES} [--list]" >&2
   exit 2
 fi
 
@@ -96,12 +102,12 @@ if [[ -z "$ARCHIVE" ]]; then
   if ! command -v gdown >/dev/null; then
     echo "gdown not found. Install it (pip install gdown) or place the archive at" >&2
     echo "  $DATA_ROOT/$NAME.7z" >&2
-    echo "Drive link: https://drive.google.com/file/d/${GDRIVE_IDS[$NAME]}/view" >&2
+    echo "Drive link: https://drive.google.com/file/d/$(gdrive_id "$NAME")/view" >&2
     exit 1
   fi
   echo "=== downloading $NAME from Google Drive (~3.5 GB for normal) ==="
   # Large Drive files need the confirm-token dance; gdown handles it.
-  gdown "${GDRIVE_IDS[$NAME]}" -O "$NAME.download"
+  gdown "$(gdrive_id "$NAME")" -O "$NAME.download"
   # The Drive filename is not exposed reliably, so identify the container.
   case "$(file -b --mime-type "$NAME.download")" in
     application/x-7z-compressed) ARCHIVE="$NAME.7z" ;;
@@ -149,7 +155,10 @@ fi
 DEST="$DATA_ROOT/$NAME"
 mkdir -p "$DEST"
 
-PATTERNS=()
+# bash 3.2 (macOS) errors on "${arr[@]}" for an empty array under `set -u`,
+# so patterns are accumulated in a plain string instead of an array. None of
+# the patterns contain spaces, so word splitting on expansion is safe.
+PATTERNS=""
 for a in $KEEP_ARCHES; do
   for c in $KEEP_COMPILERS; do
     # Order matters and it is compiler-before-architecture. BinKit encodes the
@@ -159,17 +168,18 @@ for a in $KEEP_ARCHES; do
     # the real listing of all 67,680 entries.
     # A KEEP_COMPILERS entry may be a bare family ("gcc") or a pinned version
     # ("gcc-8.2.0"); the trailing "*" after $c covers both.
-    PATTERNS+=("*_${c}*_${a}_O*")
+    PATTERNS="$PATTERNS *_${c}*_${a}_O*"
   done
 done
 
 echo "=== extracting subset into $DEST ==="
-echo "patterns: ${PATTERNS[*]}"
+echo "patterns:$PATTERNS"
 echo "(7z uses solid compression, so this may decompress more than it writes;"
 echo " the saving is in disk, not necessarily in time)"
 # bsdtar exits non-zero when a pattern matches nothing, which is expected --
 # not every arch/compiler pair exists in every dataset.
-bsdtar -xf "$ARCHIVE" -C "$DEST" --strip-components="$STRIP" "${PATTERNS[@]}" || true
+# shellcheck disable=SC2086
+bsdtar -xf "$ARCHIVE" -C "$DEST" --strip-components="$STRIP" $PATTERNS || true
 
 N_FILES=$(find "$DEST" -type f | wc -l)
 if [[ "$N_FILES" -eq 0 ]]; then

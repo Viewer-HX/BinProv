@@ -143,17 +143,34 @@ def parse_labels(path: str) -> Labels:
 
 @dataclass(frozen=True)
 class Task:
-    """A classification task: a filter plus a label map."""
+    """A classification task: a filter plus a label map.
+
+    ``marginal_of``/``marginal_map`` describe a *factorized* task: one whose
+    classes are finer than the classes we actually want to score, together with
+    the map from its class index to the coarse one. Training on the finer split
+    and summing the probabilities back down is a different estimator of the same
+    quantity -- it hands the model the compiler as extra supervision instead of
+    making it marginalise the compiler out on its own.
+    """
 
     name: str
     classes: tuple[str, ...]
     keep: Callable[[dict], bool]
     to_class: Callable[[dict], str]
     note: str = ""  # which paper table this task feeds
+    marginal_of: str | None = None
+    marginal_map: tuple[int, ...] = ()
 
     @property
     def num_labels(self) -> int:
         return len(self.classes)
+
+    @property
+    def scored_classes(self) -> tuple[str, ...]:
+        """The classes metrics are reported over — coarse ones if factorized."""
+        if self.marginal_of is None:
+            return self.classes
+        return TASKS[self.marginal_of].classes
 
     def label_of(self, labels: dict) -> int | None:
         """Class index for a binary, or None if it is out of scope."""
@@ -206,6 +223,24 @@ TASKS: dict[str, Task] = {
         keep=_opt_in("O2", "O3"),
         to_class=lambda d: d["opt"],
         note="Table 4/6/7: O2 vs O3 (the hard one)",
+    ),
+    "opt_o2o3_x": Task(
+        name="opt_o2o3_x",
+        classes=("gcc_O2", "gcc_O3", "clang_O2", "clang_O3"),
+        keep=lambda d: d.get("opt") in ("O2", "O3") and d.get("compiler") in COMPILERS,
+        to_class=lambda d: f"{d['compiler']}_{d['opt']}",
+        note="O2 vs O3 factorized by compiler, marginalized back for scoring",
+        marginal_of="opt_o2o3",
+        marginal_map=(0, 1, 0, 1),
+    ),
+    "opt4_x": Task(
+        name="opt4_x",
+        classes=tuple(f"{c}_{o}" for c in COMPILERS for o in OPT_LEVELS),
+        keep=lambda d: d.get("opt") in OPT_LEVELS and d.get("compiler") in COMPILERS,
+        to_class=lambda d: f"{d['compiler']}_{d['opt']}",
+        note="O0/O1/O2/O3 factorized by compiler, marginalized back for scoring",
+        marginal_of="opt4",
+        marginal_map=(0, 1, 2, 3, 0, 1, 2, 3),
     ),
     "arch": Task(
         name="arch",

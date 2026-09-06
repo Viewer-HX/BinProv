@@ -31,8 +31,23 @@ def pick_device(*, prefer_bf16: bool = True) -> tuple[torch.device, torch.dtype 
 
     ``autocast_dtype`` is None on CPU, bf16 on any recent NVIDIA card (H200
     included), fp16 otherwise. bf16 needs no loss scaling, which keeps the
-    training loop simpler.
+    training loop simpler. On Apple Silicon the device is MPS, also with bf16
+    autocast (supported on Apple silicon and torch >= 2.3); the M-series chips
+    do not accelerate fp16 well, so bf16 is the only AMP dtype offered there.
     """
+    if torch.backends.mps.is_available():
+        dev = torch.device("mps")
+        print(f"device: {dev} (Apple Silicon)")
+        # torch has no torch.backends.mps.is_bf16_supported(); probe by
+        # allocating a bf16 tensor instead (works on Apple silicon, macOS 14+).
+        try:
+            torch.zeros(1, dtype=torch.bfloat16, device=dev)
+            bf16_ok = True
+        except (RuntimeError, TypeError):
+            bf16_ok = False
+        if prefer_bf16 and bf16_ok:
+            return dev, torch.bfloat16
+        return dev, None
     if not torch.cuda.is_available():
         print("WARNING: no CUDA device visible; running on CPU will be very slow")
         return torch.device("cpu"), None
@@ -105,7 +120,7 @@ def predict(
         ids = batch["input_ids"].to(device, non_blocking=True)
         attn = batch["attention_mask"].to(device, non_blocking=True)
         types = batch["token_type_ids"].to(device, non_blocking=True)
-        with torch.autocast("cuda", dtype=dtype, enabled=dtype is not None and device.type == "cuda"):
+        with torch.autocast(device.type, dtype=dtype, enabled=dtype is not None):
             logits = model(input_ids=ids, attention_mask=attn, token_type_ids=types)["logits"]
         p = logits.float().softmax(-1).cpu().numpy()
         pos = batch["positions"].numpy()

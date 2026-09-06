@@ -1,0 +1,50 @@
+{
+  "profile": "opt4_wide_seed29",
+  "task": "opt4",
+  "scored_classes": [
+    "O0",
+    "O1",
+    "O2",
+    "O3"
+  ],
+  "sequence_accuracy": 0.842255,
+  "balanced_accuracy": 0.830951,
+  "binary_accuracy": 0.93883,
+  "num_sequences": 116321,
+  "num_binaries": 376,
+  "recorded_test_accuracy": 0.8422554826729481,
+  "recomputed_matches_recorded": true,
+  "checkpoint": "results/hopper_release/opt4_wide_seed29/opt4",
+  "result_json": {
+    "accuracy": 0.8422554826729481,
+    "balanced_accuracy": 0.8309510174499452,
+    "confusion": [
+      [
+        37645,
+        14,
+        34,
+        19
+      ],
+      [
+        10,
+        21157,
+        1149,
+        636
+      ],
+      [
+        1,
+        2449,
+        17545,
+        6190
+      ],
+      [
+        1,
+        1860,
+        5986,
+        21625
+      ]
+    ],
+    "n": 116321
+  },
+  "evaluated_at": "2026-09-06T03:48:35"
+}

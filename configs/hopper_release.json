@@ -1,0 +1,117 @@
+{
+  "_comment": "CUDA (A100/H100) profile for scripts/train_local_release.py --config configs/hopper_release.json. Reproduces the opt4_wide_seed29 recipe (2048-byte encoder, seed 29) on 80GB GPUs with conservative micro-batches and gradient accumulation that exactly preserve the archived effective batch sizes. Output lands under results/hopper_release/.",
+  "meta": {
+    "results_dir": "results/hopper_release",
+    "logs_dir": "logs",
+    "corpus_dir": "data/corpus/binkit_x86_64",
+    "splits": "default",
+    "split_evidence": "reports/tables/split_programs.txt",
+    "backend": "cuda",
+    "license": "LICENSE",
+    "disk_reserve_gb": 80,
+    "archived_targets": {
+      "opt4_wide_seed29": {
+        "description": "archived 2048-byte opt4 target this profile reproduces",
+        "archived_result": "reports/runs/best/r9_opt4_wide_seed29/result.json",
+        "expected_seq_accuracy": 0.8385,
+        "archived_binary_accuracy": 0.9388
+      }
+    }
+  },
+  "profiles": {
+    "opt4_wide_seed29": {
+      "description": "2048-byte encoder via continued MLM (round 7 recipe), then opt4, seed 29. CUDA micro-batches for 80GB GPUs; effective batches match the archived recipes exactly.",
+      "recommended": true,
+      "task": "opt4",
+      "model_name": "binprov",
+      "backend": "cuda",
+      "steps": [
+        {
+          "phase": "pretrain512",
+          "name": "mlm512",
+          "title": "512-byte MLM pre-training (archived effective batch 256)",
+          "script": "pretrain_mlm.py",
+          "archived_args": "reports/runs/best/mlm512/pretrain_args.json",
+          "overrides": {
+            "batch_size": 64,
+            "grad_accum": 4,
+            "workers": 6,
+            "save_every_epoch": true,
+            "resume": true
+          },
+          "out": "mlm512",
+          "init_from_step": null,
+          "micro_batch": 64,
+          "grad_accum": 4,
+          "workers": 6,
+          "effective_batch": 256,
+          "archived_effective": 256
+        },
+        {
+          "phase": "pretrain2048",
+          "name": "mlm2048",
+          "title": "2048-byte continued MLM from mlm512 (round 7 recipe, archived effective batch 64)",
+          "script": "pretrain_mlm.py",
+          "args": {
+            "splits": "default",
+            "split_name": "train",
+            "seq_bytes": 2048,
+            "pos_extend": "tile",
+            "layers": 12,
+            "hidden": 768,
+            "heads": 12,
+            "intermediate": 3072,
+            "epochs": 10,
+            "max_steps": null,
+            "grad_accum": 16,
+            "batch_size": 4,
+            "lr": 0.0001,
+            "weight_decay": 0.01,
+            "warmup_ratio": 0.06,
+            "clip_grad": 1.0,
+            "mask_prob": 0.2,
+            "mask_replace": 0.5,
+            "random_replace": 0.5,
+            "max_seqs_per_binary": null,
+            "pair_prob": 0.0,
+            "val_fraction": 0.02,
+            "workers": 6,
+            "seed": 1234,
+            "fp32": false,
+            "log_every": 50,
+            "save_every_epoch": true,
+            "resume": true
+          },
+          "out": "mlm2048",
+          "init_from_step": "mlm512",
+          "micro_batch": 4,
+          "grad_accum": 16,
+          "workers": 6,
+          "effective_batch": 64,
+          "archived_effective": 64
+        },
+        {
+          "phase": "finetune",
+          "name": "opt4",
+          "title": "opt4 fine-tune at 2048 bytes, seed 29 (archived effective batch 32)",
+          "script": "experiment.py",
+          "archived_args": "reports/runs/best/r9_opt4_wide_seed29/args.json",
+          "overrides": {
+            "batch_size": 4,
+            "grad_accum": 8,
+            "workers": 6,
+            "resume": true,
+            "tag": "opt4_wide_seed29"
+          },
+          "out": "opt4",
+          "init_from_step": "mlm2048",
+          "micro_batch": 4,
+          "grad_accum": 8,
+          "workers": 6,
+          "effective_batch": 32,
+          "archived_effective": 32
+        }
+      ]
+    }
+  }
+}

@@ -7,13 +7,7 @@
     "unit_notes": {
       "stride_512": "Evaluation unit is the non-overlapping 512-byte window. A 2048-byte encoder input still reports accuracy at that 512-byte stride (overlapping windows).",
       "aperture_16.9KB": "16.9 KB aperture = mean of the window and its 16 neighbours either side = radius 16 in scripts/combine.py --context.",
-      "val_seed": "--val-seed pins the train/validation program partition. Early wide runs (r4, r6) omit it; the protocol was introduced before r7/r8/r9. Replaying an archived args.json keeps val_seed omitted when it is omitted."
-    },
-    "probability_archive": {
-      "filename": "BinProv-probs-20260903.tar",
-      "sha256": "aeb1de809b6e1ad36145633b14073a483b5c9d078047758c2293b470125e4434",
-      "files": 45,
-      "verified": "2026-09-05"
+      "val_seed": "--val-seed pins the train/validation program partition. Replaying a recorded args.json preserves whether that run set val_seed."
     },
     "verified_tables": "reports/tables/best"
   },
@@ -104,6 +98,8 @@
       "description": "BinKit x86_64 corpus packed from .text sections; needed by every phase.",
       "meta_file": "data/corpus/binkit_x86_64/meta.json",
       "fetch_command": [
+        "env",
+        "KEEP_ARCHES=x86_64",
         "bash",
         "scripts/fetch_binkit.sh",
         "normal"
@@ -128,12 +124,11 @@
         "--extra",
         "normal",
         "--workers",
-        "8",
-        "--yes"
+        "8"
       ]
     },
     "mlm512": {
-      "description": "512-byte MLM pre-training. Exact args from reports/runs/best/mlm512/pretrain_args.json (replayed; fresh output only).",
+      "description": "512-byte MLM pre-training. Exact args from reports/runs/best/mlm512/pretrain_args.json; output is written under results/best.",
       "script": "pretrain_mlm.py",
       "archived_args": "reports/runs/best/mlm512/pretrain_args.json",
       "outputs": [
@@ -188,7 +183,7 @@
           "group": "o2o3_7wide_16.9KB"
         },
         {
-          "label": "same 7 runs, binary-level majority vote",
+          "label": "same 7 runs, binary-level soft vote",
           "value": 0.9149
         }
       ],
@@ -249,7 +244,7 @@
       "expected_accuracy": 0.8762,
       "also_reports": [
         {
-          "label": "binary-level majority vote of the same 6 runs",
+          "label": "binary-level soft vote of the same 6 runs",
           "value": 0.9441
         }
       ],
@@ -263,8 +258,8 @@
       ]
     },
     "opt4_3wide_binary": {
-      "description": "Binary-level vote over just the 3 wide opt4 runs",
-      "unit": "binary-level accuracy, majority vote",
+      "description": "Binary-level soft vote over the 3 wide opt4 runs",
+      "unit": "binary-level soft-vote accuracy",
       "kind": "ensemble",
       "context": [
         0

@@ -9,7 +9,7 @@ temporary logs, and the broader experiment history are excluded from Git.
 | path | contents |
 |---|---|
 | `figures/release_training_loss.png` | MLM512, MLM2048, and fine-tuning loss curves for the released model |
-| `tables/best/` | independently recomputed result tables |
+| `tables/best/` | detailed result tables for the selected configurations |
 | `tables/split_programs.txt` | exact program-grouped test and validation split |
 | `runs/best/` | exact `args.json` and `result.json` for the 13 ensemble members, plus the MLM512 recipe |
 | `runs/release/opt4_wide_seed29/` | A100 run parameters, metrics, hardware summary, pipeline status, and training traces |

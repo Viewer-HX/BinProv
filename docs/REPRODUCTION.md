@@ -100,18 +100,6 @@ are executed together:
 python scripts/run_best.py --group all --execute
 ```
 
-To recompute an ensemble from the separately stored probability archive without
-retraining, extract the archive at the repository root and run the offline
-phase:
-
-```bash
-python scripts/run_best.py \
-  --group opt4_6run_16.9KB \
-  --phase offline \
-  --archive-probs \
-  --execute
-```
-
 ## 5. Check the results
 
 Compare generated metrics with [RESULTS.md](RESULTS.md). Version-controlled

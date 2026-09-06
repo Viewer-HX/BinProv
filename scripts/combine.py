@@ -193,7 +193,7 @@ def compiler_of(corpus: Corpus, bid: np.ndarray) -> np.ndarray:
 
 
 def binary_vote(prob, bid, true) -> tuple[np.ndarray, np.ndarray]:
-    """Soft majority vote per binary — the paper's §3.4 binary level."""
+    """Soft vote per binary — the paper's §3.4 binary level."""
     uniq, inv = np.unique(bid, return_inverse=True)
     tally = np.zeros((len(uniq), prob.shape[1]))
     np.add.at(tally, inv, prob)

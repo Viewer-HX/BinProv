@@ -1,6 +1,6 @@
 # Canonical program partition for data/corpus/binkit_x86_64, splits 'default'
 # (train_ratio 0.8, group_by program, seed 1234) and the validation carve-out
-# used by every exploration run (--val-frac 0.15 --val-seed 1234).
+# used by every selected run (--val-frac 0.15 --val-seed 1234).
 #
 # Shipped so a reproducer can VERIFY the split rather than trust it. The split is
 # derived from the sorted set of program names, so it is reproducible as long as

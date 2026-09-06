@@ -266,7 +266,7 @@ def add_train_step(cfg: dict, steps: list[dict], tag: str) -> None:
     if res_rel and (ROOT / res_rel).exists():
         res = read_json(res_rel)
         try:
-            acc = f"archived test acc {res['test']['accuracy'] * 100:.2f}%"
+            acc = f"recorded test acc {res['test']['accuracy'] * 100:.2f}%"
             if res.get("test_tta") is not None:
                 acc += f" (tta {res['test_tta']['accuracy'] * 100:.2f}%)"
         except (KeyError, TypeError):
@@ -533,7 +533,7 @@ def main(argv: list[str] | None = None) -> int:
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="print only (the default)")
     ap.add_argument("--archive-probs", action="store_true",
-                    help="offline only: use results/explore probabilities and archived metadata")
+                    help="offline only: use a separately stored probability bundle")
     mode.add_argument("--execute", action="store_true",
                     help="actually run (default is a dry run: print, mutate nothing)")
     ap.add_argument("--list", action="store_true", help="list groups and exit")
@@ -565,7 +565,7 @@ def main(argv: list[str] | None = None) -> int:
         if g.get("kind") == "archived_no_recipe":
             return err(
                 f"group '{args.group}' has no exact recipe: {g['note']} "
-                "It is archived evidence only (expected accuracy "
+                "It is recorded evidence only (expected accuracy "
                 f"{g['expected_accuracy']:.4f}); do not attempt to replay it."
             )
     else:
@@ -575,7 +575,7 @@ def main(argv: list[str] | None = None) -> int:
     execute = args.execute
     print(f"== BinProv measured-results plan: group '{group_title}' "
           f"(phase {args.phase}, {'EXECUTE' if execute else 'dry-run'}) ==")
-    print(f"corpus: {cfg['corpus_dir']}   fresh outputs under: {cfg['results_dir']}/")
+    print(f"corpus: {cfg['corpus_dir']}   outputs under: {cfg['results_dir']}/")
 
     steps = plan(cfg, selected, args.phase)
     if not steps:

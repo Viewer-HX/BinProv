@@ -19,6 +19,7 @@ repository includes weights, the minimal runtime, exact training metadata, and
 an inference script for ELF files or extracted `.text` bytes.
 
 ```bash
+python -m pip install --upgrade huggingface_hub
 hf download XuViewer/binprov --local-dir binprov-model
 cd binprov-model
 pip install -r requirements.txt
@@ -29,8 +30,8 @@ python inference.py --model model --elf /path/to/binary.elf
 
 BinKit x86_64, **program-grouped split** (47 test programs). The supported
 full-training profile uses one A100 80 GB GPU.
-Full provenance and replay:
-[docs/RESULTS.md](docs/RESULTS.md). Verified offline tables: [reports/tables/best/](reports/tables/best/).
+Detailed results and reproduction:
+[docs/RESULTS.md](docs/RESULTS.md). Result tables: [reports/tables/best/](reports/tables/best/).
 
 **Units.** The encoder *input* is 2048 bytes, but accuracy is scored at the
 paper's **non-overlapping 512-byte stride** (the wide encoder sees overlapping
@@ -46,10 +47,11 @@ wide inputs also include context beyond each target window.
 | Same 7 runs, 16.9 KB aperture | **81.10%** | sequence level, mean over 33 windows | `o2o3_7wide_16.9KB` |
 | 2048-B encoder alone on O2/O3 | **71.98%** (SD 0.68 pp) | mean of **three** seeds | `o2o3_pretrained_wide_mean` |
 | 4-way O0/O1/O2/O3, 6-run ensemble | **87.62%** | sequence level, 116,321 windows, 16.9 KB aperture | `opt4_6run_16.9KB` |
-| opt4, binary-level vote | **95.21%** | vote over the 3 *wide* runs only | `opt4_3wide_binary` |
+| opt4, binary-level soft vote | **95.21%** | probability sum over the 3 *wide* runs | `opt4_3wide_binary` |
 
 Exact ensemble membership and per-run evidence are recorded in
 [docs/RESULTS.md](docs/RESULTS.md).
+
 ## Install
 
 ```bash
@@ -60,7 +62,8 @@ pip install -r requirements.txt          # for BinKit fetch also: pip install gd
 
 `requirements.txt` pins the versions used to train and publish the model:
 torch 2.8.0, transformers 4.55.4, and numpy 2.3.3, with Python 3.12.11 recorded
-for the measured run. Corpus building itself does not require torch.
+for the measured run. Matplotlib regenerates the training figures. Corpus
+building itself does not require torch.
 
 ## Hardware requirements for training
 
@@ -90,15 +93,16 @@ these first (from `configs/best_results.json`):
 ```bash
 # fetch + selectively extract BinKit "normal" (Google Drive .7z).
 # Shell script — run with bash, NOT python. Needs gdown (pip install gdown) + bsdtar.
-bash scripts/fetch_binkit.sh normal
+KEEP_ARCHES=x86_64 bash scripts/fetch_binkit.sh normal
 
 # pack .text into a flat corpus (steady state ~211 MB; binaries deletable after)
 python scripts/build_corpus.py --root data/binkit/normal \
     --out data/corpus/binkit_x86_64 --arch x86_64 --compiler gcc clang \
-    --opt O0 O1 O2 O3 --extra normal --workers 8 --yes
+    --opt O0 O1 O2 O3 --extra normal --workers 8
 ```
 
 Split evidence: `reports/tables/split_programs.txt`.
+
 ## Reproducing the measurements
 
 One driver, `scripts/run_best.py`, reads
@@ -113,28 +117,24 @@ python scripts/run_best.py --group NAME --phase train    # choose one phase
 ```
 
 - `--phase` defaults to `all`; dry-run is the default (`--dry-run` accepted).
-- `offline` uses fresh fine-tune outputs under `results/best/finetune` by
-  default; `--archive-probs` instead resolves probabilities from
-  `results/explore` via the committed report metadata.
-- All generated output lands under `results/best` (MLMs at `results/best/ckpt/mlm512` and `.../mlm2048`).
-
-The separate `BinProv-probs-20260903.tar` archive is required for archived
-probability recomputation. Extract it from the repository root with
-`tar -xf /path/to/BinProv-probs-20260903.tar` (it creates `results/explore/*/probs.npz`).
-The packed corpus is also required. New training generates its own probabilities.
+- `offline` recomputes tables from completed fine-tuning outputs under
+  `results/best/finetune`.
+- All generated output lands under `results/best` (MLMs at
+  `results/best/ckpt/mlm512` and `.../mlm2048`).
 
 After the data above is in place:
 
 ```bash
-python scripts/run_best.py --group o2o3_7wide_16.9KB --execute         # measured O2/O3 ensemble
-python scripts/run_best.py --group opt4_6run_16.9KB --phase offline \
-    --archive-probs --execute            # offline ensemble from archived probs
+python scripts/run_best.py --group o2o3_7wide_16.9KB --execute
+python scripts/run_best.py --group opt4_6run_16.9KB --execute
 ```
 
-Existing training output directories are not overwritten; move them aside for a new run, or use
-`--phase train` / `--phase offline` to start from completed prerequisite stages.
+Existing training output directories are not overwritten; move them aside for
+a new run, or use `--phase train` / `--phase offline` to start from completed
+prerequisite stages.
 Run `--group all --execute` once to produce all supported result tables, reusing
 shared model runs within that plan.
+
 ## Documentation
 
 - [docs/RESULTS.md](docs/RESULTS.md) — measured metrics, configuration
@@ -142,8 +142,9 @@ shared model runs within that plan.
 - Supporting documentation: [docs/REPRODUCTION.md](docs/REPRODUCTION.md)
   (end-to-end training workflow) and [docs/DATA.md](docs/DATA.md) (data download
   and corpus building).
-- Curated artifacts for the measured configurations and released model: [reports/](reports/)
-  (weights are hosted on Hugging Face).
+- Curated artifacts for the measured configurations and released model:
+  [reports/](reports/) (weights are hosted on Hugging Face).
+
 ## Citation
 
 ```

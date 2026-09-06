@@ -2,8 +2,8 @@
 
 This page is the single record of the results measured with the repository's
 selected configurations. It reports observed values only. Exact arguments and
-machine-readable result files are committed under `reports/runs/`; independently
-recomputed tables are under `reports/tables/best/`.
+machine-readable result files are committed under `reports/runs/`; detailed
+tables are under `reports/tables/best/`.
 
 ## Evaluation setup
 
@@ -35,16 +35,15 @@ unit.
 | same 7-model ensemble | O2/O3, 16.9 KB aperture sequence accuracy | **81.10%** |
 | three wide seeds | O2/O3, mean 512-byte sequence accuracy | **71.98%** (SD 0.68 pp) |
 | 6-model narrow+wide ensemble | O0/O1/O2/O3, 16.9 KB aperture sequence accuracy | **87.62%** |
-| three wide seeds | O0/O1/O2/O3, binary vote accuracy | **95.21%** |
+| three wide seeds | O0/O1/O2/O3, binary soft-vote accuracy | **95.21%** |
 
 The released model was trained end to end and evaluated from its saved
 checkpoint. The selected fine-tuning epoch was epoch 4 of 6, with 77.61%
 validation accuracy. The complete MLM512 → MLM2048 → fine-tuning → evaluation →
 export pipeline took 12:42:09.
 
-The ensemble measurements were independently recomputed from the saved
-per-window probabilities and canonical corpus. Their exact member lists are
-recorded below.
+The ensemble measurements use the saved per-window probabilities and canonical
+corpus. Their exact member lists are recorded below.
 
 ## Training loss
 
@@ -84,7 +83,7 @@ The 87.62% measurement combines all six models at the 16.9 KB aperture. The
 |---|---|
 | released model arguments, metrics, hardware, pipeline timestamps, and training trace | [`reports/runs/release/opt4_wide_seed29/`](../reports/runs/release/opt4_wide_seed29/) |
 | exact arguments and result JSON for the 13 ensemble members | [`reports/runs/best/`](../reports/runs/best/) |
-| recomputed result tables | [`reports/tables/best/`](../reports/tables/best/) |
+| detailed result tables | [`reports/tables/best/`](../reports/tables/best/) |
 | exact program split | [`reports/tables/split_programs.txt`](../reports/tables/split_programs.txt) |
 | machine-readable configuration map | [`configs/best_results.json`](../configs/best_results.json) |
 | released model weights | [XuViewer/binprov](https://huggingface.co/XuViewer/binprov) |
@@ -103,10 +102,6 @@ After preparing the corpus, add `--execute` to train and evaluate. The CUDA
 profile used for the released single model is `configs/gpu_release.json`.
 Generated checkpoints, probabilities, and exports are written under ignored
 `results/` directories rather than committed to Git.
-
-The separately stored probability archive is required only to recompute the
-ensemble tables without retraining. New training generates fresh probability
-files.
 
 Repeated training can vary by roughly 1–2 percentage points with the seed and
 software environment. Compare multi-seed distributions when assessing a new

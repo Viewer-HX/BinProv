@@ -8,19 +8,11 @@
     "split_evidence": "reports/tables/split_programs.txt",
     "backend": "cuda",
     "license": "LICENSE",
-    "disk_reserve_gb": 80,
-    "archived_targets": {
-      "opt4_wide_seed29": {
-        "description": "archived 2048-byte opt4 target this profile reproduces",
-        "archived_result": "reports/runs/best/r9_opt4_wide_seed29/result.json",
-        "expected_seq_accuracy": 0.8385,
-        "archived_binary_accuracy": 0.9388
-      }
-    }
+    "disk_reserve_gb": 80
   },
   "profiles": {
     "opt4_wide_seed29": {
-      "description": "2048-byte encoder via continued MLM, then opt4 fine-tuning with seed 29. Verified on one A100 80 GB GPU; effective batches match the selected best recipe exactly.",
+      "description": "2048-byte encoder via continued MLM, then opt4 fine-tuning with seed 29. Verified on one A100 80 GB GPU; effective batches match the selected recipe exactly.",
       "recommended": true,
       "task": "opt4",
       "model_name": "binprov",
@@ -29,7 +21,7 @@
         {
           "phase": "pretrain512",
           "name": "mlm512",
-          "title": "512-byte MLM pre-training (archived effective batch 256)",
+          "title": "512-byte MLM pre-training (effective batch 256)",
           "script": "pretrain_mlm.py",
           "archived_args": "reports/runs/best/mlm512/pretrain_args.json",
           "overrides": {
@@ -50,7 +42,7 @@
         {
           "phase": "pretrain2048",
           "name": "mlm2048",
-          "title": "2048-byte continued MLM from mlm512 (round 7 recipe, archived effective batch 64)",
+          "title": "2048-byte continued MLM from mlm512 (effective batch 64)",
           "script": "pretrain_mlm.py",
           "args": {
             "splits": "default",
@@ -93,7 +85,7 @@
         {
           "phase": "finetune",
           "name": "opt4",
-          "title": "opt4 fine-tune at 2048 bytes, seed 29 (archived effective batch 32)",
+          "title": "opt4 fine-tune at 2048 bytes, seed 29 (effective batch 32)",
           "script": "experiment.py",
           "archived_args": "reports/runs/best/r9_opt4_wide_seed29/args.json",
           "overrides": {

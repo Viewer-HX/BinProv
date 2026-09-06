@@ -658,7 +658,7 @@ def missing_inputs(cfg: dict, profile: str, unit: dict) -> list[str]:
 
 def show_plan(cfg: dict, profile: str, units: list[dict], execute: bool) -> None:
     prof = cfg["profiles"][profile]
-    print(f"== BinProv local release: profile '{profile}' "
+    print(f"== BinProv release training: profile '{profile}' "
           f"({prof['description']}) ==")
     print(f"corpus: {cfg['meta']['corpus_dir']}   outputs under: "
           f"{cfg['meta']['results_dir']}/{profile}/")
@@ -671,8 +671,7 @@ def show_plan(cfg: dict, profile: str, units: list[dict], execute: bool) -> None
             print(f"  status: {state} ({detail})")
             desired = step_desired(cfg, profile, step)
             print(f"  micro-batch {desired['batch_size']} x accum "
-                  f"{desired['grad_accum']} = effective {desired['batch_size'] * desired['grad_accum']}"
-                  f"  (archived effective {step['effective_batch']})")
+                  f"{desired['grad_accum']} = effective {desired['batch_size'] * desired['grad_accum']}")
             for m in missing_inputs(cfg, profile, unit):
                 print(f"  [missing input: {m}]")
             cmd = replay_argv(step["script"], desired)

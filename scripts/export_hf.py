@@ -514,7 +514,7 @@ def parse_args():
     ap.add_argument("--model-name", default="binprov",
                     help="name used in the model card / HF repo id")
     ap.add_argument("--eval-json", default=None,
-                    help="optional local-release evaluate/report.json (binary acc)")
+                    help="optional release evaluate/report.json (binary accuracy)")
     ap.add_argument("--corpus", default=None,
                     help="corpus dir for the real-window verification sample")
     ap.add_argument("--no-verify", action="store_true",

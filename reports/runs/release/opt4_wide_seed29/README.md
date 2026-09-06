@@ -12,17 +12,12 @@ gitignored `results/gpu_release/opt4_wide_seed29/export/` directory.
 | validation accuracy | 77.6125% |
 | sequence accuracy | **84.2255%** (balanced 83.0951%, 116,321 windows) |
 | binary soft-vote accuracy | **93.8830%** (376 binaries) |
-| archived seed-29 reference | 83.85% sequence; 93.88% binary |
-
-The fresh sequence score is 0.3755 percentage points above the archived
-seed-29 result; binary accuracy agrees to rounding. `evaluation.json` also
-records that recomputation from the saved probabilities matches `result.json`.
 
 Files:
 
 - `args.json`: exact fine-tuning arguments.
 - `result.json`: epoch history, selected epoch, confusion matrix, and test metrics.
-- `evaluation.json`: independently recomputed sequence and binary metrics.
+- `evaluation.json`: sequence and binary metrics calculated from the saved probabilities.
 - `pipeline_status.json`: completion timestamps for MLM512, MLM2048, fine-tune,
   and export.
 - `hardware.json`: portable hardware allocation and elapsed-time summary.

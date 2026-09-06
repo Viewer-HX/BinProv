@@ -1,7 +1,7 @@
 {
-  "_comment": "Verified GMU Hopper A100 80 GB profile for scripts/train_local_release.py --config configs/hopper_release.json. Reproduces the opt4_wide_seed29 recipe (2048-byte encoder, seed 29) with the micro-batches and gradient accumulation used by Slurm job 9558937. Output lands under results/hopper_release/.",
+  "_comment": "Verified single-GPU A100 80 GB profile for scripts/train_local_release.py --config configs/gpu_release.json. Reproduces the opt4_wide_seed29 recipe (2048-byte encoder, seed 29) with the tested CUDA micro-batches and gradient accumulation. Output lands under results/gpu_release/.",
   "meta": {
-    "results_dir": "results/hopper_release",
+    "results_dir": "results/gpu_release",
     "logs_dir": "logs",
     "corpus_dir": "data/corpus/binkit_x86_64",
     "splits": "default",
@@ -20,7 +20,7 @@
   },
   "profiles": {
     "opt4_wide_seed29": {
-      "description": "2048-byte encoder via continued MLM, then opt4 fine-tuning with seed 29. Verified on one A100 80 GB on GMU Hopper; effective batches match the selected best recipe exactly.",
+      "description": "2048-byte encoder via continued MLM, then opt4 fine-tuning with seed 29. Verified on one A100 80 GB GPU; effective batches match the selected best recipe exactly.",
       "recommended": true,
       "task": "opt4",
       "model_name": "binprov",

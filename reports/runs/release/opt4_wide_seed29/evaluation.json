@@ -14,7 +14,7 @@
   "num_binaries": 376,
   "recorded_test_accuracy": 0.8422554826729481,
   "recomputed_matches_recorded": true,
-  "checkpoint": "results/hopper_release/opt4_wide_seed29/opt4",
+  "checkpoint": "results/gpu_release/opt4_wide_seed29/opt4",
   "result_json": {
     "accuracy": 0.8422554826729481,
     "balanced_accuracy": 0.8309510174499452,

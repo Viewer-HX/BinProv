@@ -16,7 +16,7 @@ the bundled MPS inference smoke test.
 - `XuViewer/binprov` was unoccupied when checked on 2026-09-06.
 
 The upload source is the gitignored
-`results/hopper_release/opt4_wide_seed29/export/` directory. Its root
+`results/gpu_release/opt4_wide_seed29/export/` directory. Its root
 `README.md` is the Hub model card and includes valid metadata, direct-use
 instructions, metrics, training provenance, limitations, and citation. The
 directory bundles the minimal BinProv runtime and uses no `trust_remote_code`.
@@ -29,7 +29,7 @@ hf auth login
 hf auth whoami --format json
 hf repos create XuViewer/binprov --type model --public
 hf upload-large-folder XuViewer/binprov \
-  results/hopper_release/opt4_wide_seed29/export \
+  results/gpu_release/opt4_wide_seed29/export \
   --repo-type model
 ```
 

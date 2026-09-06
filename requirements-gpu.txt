@@ -1,0 +1,4 @@
+# Exact Python package environment used by the verified A100 80 GB release run.
+torch==2.8.0
+transformers==4.55.4
+numpy==2.3.3

@@ -21,7 +21,7 @@ numpy>=1.23
 #                 reads .7z with the same wildcard syntax as tar.
 
 # ---------------------------------------------------------------------------
-# Versions used by the verified GMU Hopper release run. The bounds above are
+# Versions used by the verified A100 80 GB release run. The bounds above are
 # what the code needs; these are what the published model ran on. Accuracy moves
 # by 1-2 points between seeds, so a different torch or transformers version is
 # a plausible source of a similar-sized shift -- pin these if you are comparing
@@ -32,5 +32,5 @@ numpy>=1.23
 #   transformers     4.55.4
 #   numpy            2.3.3
 #
-# GPU: one NVIDIA A100 80 GB on GMU Hopper, bf16 autocast throughout. The exact
-# micro-batches and gradient accumulation are in configs/hopper_release.json.
+# GPU: one NVIDIA A100 80 GB, bf16 autocast throughout. The exact
+# micro-batches and gradient accumulation are in configs/gpu_release.json.

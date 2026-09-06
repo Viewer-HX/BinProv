@@ -28,8 +28,8 @@ python inference.py --model model --elf /path/to/binary.elf
 ## Best results first
 
 BinKit x86_64, **program-grouped split** (47 test programs); curated archived
-measurements. The supported training environment is the verified GMU Hopper
-A100 80 GB recipe below. Full provenance and replay:
+measurements. The supported full-training profile uses one A100 80 GB GPU.
+Full provenance and replay:
 [docs/BEST_RESULTS.md](docs/BEST_RESULTS.md). Verified offline tables: [reports/tables/best/](reports/tables/best/).
 
 **Units.** The encoder *input* is 2048 bytes, but accuracy is scored at the
@@ -73,6 +73,27 @@ building needs no torch. **Recorded versions** (results produced with): python
 3.12.11, torch 2.8.0+cu128, transformers 4.55.4, numpy 2.3.3. Accuracy moves 1–2
 points with seed, so a different torch/transformers is a plausible source of a
 similar shift — pin these when comparing against the tables.
+
+## Hardware requirements for training
+
+The released `opt4_wide_seed29` recipe was verified with the following
+allocation. Inference is much lighter and does not require this hardware.
+
+| resource | verified full-training configuration |
+|---|---|
+| GPU | 1× NVIDIA A100 80 GB, bf16 |
+| CPU | 8 cores |
+| system memory | 64 GB |
+| free disk | at least 80 GB for corpus, checkpoints, logs, and export |
+| software | Python 3.12.11, PyTorch 2.8.0, Transformers 4.55.4, NumPy 2.3.3 |
+| elapsed time | 12:42:09 for MLM512, MLM2048, fine-tuning, evaluation, and export |
+
+The exact CUDA micro-batches and gradient accumulation are in
+[configs/gpu_release.json](configs/gpu_release.json). An equivalent CUDA GPU
+may work; configurations with less than 80 GB of VRAM require smaller
+micro-batches and matching increases in gradient accumulation, and have not
+been verified here.
+
 ## Getting the data (explicit — the runner never downloads)
 
 The `prepare` phase only checks that the corpus and split already exist. Run
@@ -129,10 +150,6 @@ Run `--group all --execute` once to produce all supported result tables, reusing
 shared model runs within that plan.
 ## Documentation
 
-- [docs/HOPPER_TRAINING.md](docs/HOPPER_TRAINING.md) — verified GMU Hopper
-  Slurm recipe for training and exporting the best single
-  `opt4_wide_seed29` model on one A100 80 GB GPU;
-  the verified A100 replica reached **84.23% sequence / 93.88% binary accuracy**.
 - [docs/HUGGINGFACE_RELEASE.md](docs/HUGGINGFACE_RELEASE.md) — reviewed model
   card, repository naming, upload source, and publication checks.
 - [docs/LOCAL_TRAINING.md](docs/LOCAL_TRAINING.md) — **bounded local training on

@@ -364,7 +364,7 @@ def test_export_dir_rejects_rebuild_over_existing_output():
 # --config flag and alternate config loading
 # ---------------------------------------------------------------------------
 
-HOPPER_CFG = ROOT / "configs" / "hopper_release.json"
+GPU_CFG = ROOT / "configs" / "gpu_release.json"
 
 
 def test_config_flag_loads_default_when_omitted():
@@ -374,12 +374,12 @@ def test_config_flag_loads_default_when_omitted():
     assert "opt4_narrow_seed13" in cfg["profiles"]
 
 
-def test_config_flag_loads_hopper_release():
-    """--config configs/hopper_release.json loads the CUDA profile."""
-    cfg = runner.load_config(str(HOPPER_CFG))
+def test_config_flag_loads_gpu_release():
+    """--config configs/gpu_release.json loads the CUDA profile."""
+    cfg = runner.load_config(str(GPU_CFG))
     assert "opt4_wide_seed29" in cfg["profiles"]
     assert cfg["meta"]["backend"] == "cuda"
-    assert cfg["meta"]["results_dir"] == "results/hopper_release"
+    assert cfg["meta"]["results_dir"] == "results/gpu_release"
 
 
 def test_config_flag_rejects_missing_file():
@@ -391,9 +391,9 @@ def test_config_flag_rejects_missing_file():
         pass
 
 
-def test_hopper_config_batch_invariants():
-    """Every hopper step's effective batch == micro_batch * grad_accum == archived."""
-    cfg = runner.load_config(str(HOPPER_CFG))
+def test_gpu_config_batch_invariants():
+    """Every GPU step's effective batch equals micro-batch times accumulation."""
+    cfg = runner.load_config(str(GPU_CFG))
     for pname, prof in cfg["profiles"].items():
         for step in prof["steps"]:
             assert step["micro_batch"] * step["grad_accum"] == step["effective_batch"], (
@@ -403,19 +403,19 @@ def test_hopper_config_batch_invariants():
             assert step["workers"] == 6, pname
 
 
-def test_hopper_config_dry_run():
-    """Dry-run with --config hopper_release.json produces no output."""
-    if not HOPPER_CFG.is_file():
-        print("  skipping: configs/hopper_release.json not present")
+def test_gpu_config_dry_run():
+    """Dry-run with --config gpu_release.json produces no output."""
+    if not GPU_CFG.is_file():
+        print("  skipping: configs/gpu_release.json not present")
         return
     with patch_or_none(runner.subprocess, "Popen", AssertionError("ran a command")), \
          patch_or_none(runner.subprocess, "run", _fake_pmset_ac):
         with contextlib.redirect_stdout(io.StringIO()) as out, \
              contextlib.redirect_stderr(io.StringIO()):
-            rc = runner.main(["--config", str(HOPPER_CFG), "--dry-run"])
+            rc = runner.main(["--config", str(GPU_CFG), "--dry-run"])
     assert rc == 0
     assert "nothing was created or executed" in out.getvalue()
-    assert "hopper_release" in out.getvalue()
+    assert "gpu_release" in out.getvalue()
 
 
 def main() -> int:

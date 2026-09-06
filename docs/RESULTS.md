@@ -305,6 +305,6 @@ CUDA_VISIBLE_DEVICES=<free gpu> ARCH=x86_64 \
   scripts/run_binkit.sh
 ```
 
-For a measured compute budget, use the supported Hopper release workflow in
-[HOPPER_TRAINING.md](HOPPER_TRAINING.md): its complete wide training,
-evaluation, and export pipeline finished in 12:42:09 on one A100 80 GB.
+For a measured compute budget, see the hardware requirements in the repository
+README: the complete wide training, evaluation, and export pipeline finished
+in 12:42:09 on one A100 80 GB.

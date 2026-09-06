@@ -13,8 +13,8 @@ archived `result.json`, so the driver displays the source measurements alongside
 
 | | |
 |---|---|
-| Training environment | GMU Hopper, one NVIDIA A100 80 GB, bf16 autocast |
-| Verified job | Slurm `9558937`, completed in 12:42:09 without restart |
+| Training environment | one NVIDIA A100 80 GB, bf16 autocast |
+| Verified full-pipeline time | 12:42:09 without restart |
 | Recorded versions | python 3.12.11, torch 2.8.0+cu128, transformers 4.55.4, numpy 2.3.3 |
 | Corpus | BinKit x86_64, program-grouped split (47 test / 28 val programs) |
 | O2/O3 test set | 55,657 windows |
@@ -51,7 +51,8 @@ The exact args, epoch history, confusion matrix, independent evaluation, and
 pipeline timestamps are committed under
 [`reports/runs/release/opt4_wide_seed29`](../reports/runs/release/opt4_wide_seed29/README.md).
 The upload-ready 335 MiB model is generated under the gitignored
-`results/hopper_release/opt4_wide_seed29/export/`.
+`results/gpu_release/opt4_wide_seed29/export/`. Hardware requirements are in
+the repository README.
 
 ## O2/O3 — 75.10% and 81.10% (same 7 runs)
 Both scores are the **same 7-run ensemble**; only the inference aperture changes.

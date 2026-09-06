@@ -1,0 +1,10 @@
+{
+  "gpu": "NVIDIA A100 80 GB",
+  "gpus": 1,
+  "precision": "bf16",
+  "cpu_cores": 8,
+  "system_memory_gb": 64,
+  "elapsed": "12:42:09",
+  "completed": "2026-09-06",
+  "restarts": 0
+}

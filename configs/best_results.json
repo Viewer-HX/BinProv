@@ -3,7 +3,7 @@
   "meta": {
     "corpus": "BinKit x86_64, program-grouped split (47 test programs / 28 val programs). O2/O3 test = 55,657 windows; opt4 test = 116,321 windows.",
     "versions": "python 3.12.11, torch 2.8.0+cu128, transformers 4.55.4, numpy 2.3.3",
-    "supported_training_environment": "GMU Hopper, one NVIDIA A100 80 GB, bf16 autocast; verified release run: Slurm job 9558937",
+    "supported_training_environment": "One NVIDIA A100 80 GB, bf16 autocast; full release pipeline verified in 12:42:09",
     "unit_notes": {
       "stride_512": "Evaluation unit is the non-overlapping 512-byte window. A 2048-byte encoder input still reports accuracy at that 512-byte stride (overlapping windows).",
       "aperture_16.9KB": "16.9 KB aperture = mean of the window and its 16 neighbours either side = radius 16 in scripts/combine.py --context.",

@@ -398,7 +398,7 @@ def preflight(cfg: dict, profile: str, execute: bool) -> list[str]:
             "train on a fallback device"
         )
 
-    # Power checks only apply to the macOS local path. Slurm nodes do not expose
+    # Power checks only apply to the macOS local path. Remote GPU nodes do not expose
     # pmset and should not emit laptop-specific warnings.
     if sys.platform == "darwin":
         ps = power_state()

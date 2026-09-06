@@ -6,25 +6,25 @@
         "state": "done",
         "rc": 0,
         "finished": "2026-09-05T17:29:14",
-        "log": "results/hopper_release/opt4_wide_seed29/logs/pretrain512.log"
+        "log": "results/gpu_release/opt4_wide_seed29/logs/pretrain512.log"
       },
       "pretrain2048": {
         "state": "done",
         "rc": 0,
         "finished": "2026-09-05T20:53:31",
-        "log": "results/hopper_release/opt4_wide_seed29/logs/pretrain2048.log"
+        "log": "results/gpu_release/opt4_wide_seed29/logs/pretrain2048.log"
       },
       "finetune": {
         "state": "done",
         "rc": 0,
         "finished": "2026-09-06T03:48:35",
-        "log": "results/hopper_release/opt4_wide_seed29/logs/finetune.log"
+        "log": "results/gpu_release/opt4_wide_seed29/logs/finetune.log"
       },
       "export": {
         "state": "done",
         "rc": 0,
         "finished": "2026-09-06T03:49:04",
-        "log": "results/hopper_release/opt4_wide_seed29/logs/export.log"
+        "log": "results/gpu_release/opt4_wide_seed29/logs/export.log"
       }
     }
   },

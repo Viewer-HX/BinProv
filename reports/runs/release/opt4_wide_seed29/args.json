@@ -1,9 +1,9 @@
 {
   "corpus": "data/corpus/binkit_x86_64",
   "task": "opt4",
-  "out": "results/hopper_release/opt4_wide_seed29/opt4",
+  "out": "results/gpu_release/opt4_wide_seed29/opt4",
   "splits": "default",
-  "init_from": "results/hopper_release/opt4_wide_seed29/mlm2048",
+  "init_from": "results/gpu_release/opt4_wide_seed29/mlm2048",
   "from_scratch": false,
   "tag": "opt4_wide_seed29",
   "arch": null,

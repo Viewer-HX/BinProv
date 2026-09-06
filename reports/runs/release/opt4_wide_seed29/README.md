@@ -1,12 +1,12 @@
 # A100 release replica: `opt4_wide_seed29`
 
 This is the compact, version-controlled evidence for the release model trained
-from the repository recipe on GMU Hopper. The upload-ready weights stay in the
-gitignored `results/hopper_release/opt4_wide_seed29/export/` directory.
+from the repository recipe on one A100 80 GB GPU. The upload-ready weights stay in the
+gitignored `results/gpu_release/opt4_wide_seed29/export/` directory.
 
 | item | value |
 |---|---|
-| Slurm job | `9558937`, one A100 80 GB, completed with exit code `0:0` |
+| hardware | one A100 80 GB, 8 CPU cores, 64 GB system memory, bf16 |
 | elapsed | 12:42:09 (2026-09-05 15:06:56 to 2026-09-06 03:49:05 EDT) |
 | best epoch | 4 of 6 |
 | validation accuracy | 77.6125% |
@@ -25,9 +25,8 @@ Files:
 - `evaluation.json`: independently recomputed sequence and binary metrics.
 - `pipeline_status.json`: completion timestamps for MLM512, MLM2048, fine-tune,
   and export.
-- `job.json`: scheduler outcome, allocation, and elapsed time.
+- `hardware.json`: portable hardware allocation and elapsed-time summary.
 - `train_log.jsonl`: compact fine-tuning trace.
 
-Reproduce the complete training and export with
-`configs/hopper_release.json`, `scripts/train_local_release.py`, and
-`scripts/hopper_release.sbatch`, as documented in `docs/HOPPER_TRAINING.md`.
+The portable training parameters are in `configs/gpu_release.json`; hardware
+requirements are documented in the repository README.

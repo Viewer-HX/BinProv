@@ -1,36 +1,20 @@
 #!/usr/bin/env python3
-"""Bounded local-training and release-preparation driver for one Mac.
+"""Train, evaluate, and export the released BinProv model.
 
-Reads ``configs/local_release.json`` and runs each profile's stages sequentially
-through the existing training scripts (``pretrain_mlm.py``, ``experiment.py``)
-plus an in-process evaluation over the saved probabilities and
-``scripts/export_hf.py``. Every stage is an *archived recipe re-expressed* for a
-small MPS micro-batch with gradient accumulation, so the archived effective
-batch size is preserved exactly (see configs/local_release.json). Output is
-written only under ``results/local_release/<profile>/`` — never to the
-historical ``checkpoints/``, ``reports/`` or ``results/explore`` paths.
+The default profile is ``configs/gpu_release.json``. Its stages run sequentially
+through ``pretrain_mlm.py``, ``experiment.py``, evaluation over saved
+probabilities, and ``export_hf.py``. Output is written under
+``results/gpu_release/<profile>/``.
 
-Dry-run is the default: the whole plan is printed, nothing is created or run.
-Use ``--execute`` to run. On macOS every training command is wrapped in
-``caffeinate`` so an unattended run does not fall asleep; keep the machine
-plugged in for the durations documented in docs/LOCAL_TRAINING.md.
-
-Resume policy (safe by construction): a stage output is only ever launched into
-again when its previously saved ``args.json``/``pretrain_args.json`` exactly
-matches the arguments this run would use (``--resume`` must be passed to touch
-an existing, interrupted stage). A completed checkpoint counts only when the
-real files are present — weights + config + the training result/state — never a
-partial set. ``results/local_release/status.json`` records stage outcomes and is
-rewritten atomically.
+Dry-run is the default. Use ``--execute`` to run and ``--resume`` to continue
+an interrupted stage whose saved arguments match the selected profile.
 
 Examples::
 
-    python scripts/train_local_release.py --list
-    python scripts/train_local_release.py --profile opt4_narrow_seed13        # dry-run
-    python scripts/train_local_release.py --profile opt4_narrow_seed13 --execute
-    python scripts/train_local_release.py --profile opt4_narrow_seed13 \
-        --phase finetune --resume --execute        # continue an interrupted run
-    python scripts/train_local_release.py --profile opt4_narrow_seed13 \
+    python scripts/train_release.py --list
+    python scripts/train_release.py --profile opt4_wide_seed29
+    python scripts/train_release.py --profile opt4_wide_seed29 --execute
+    python scripts/train_release.py --profile opt4_wide_seed29 \
         --phase export --execute
 """
 
@@ -49,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-DEFAULT_CONFIG = ROOT / "configs" / "local_release.json"
+DEFAULT_CONFIG = ROOT / "configs" / "gpu_release.json"
 PY = sys.executable
 
 sys.path.insert(0, str(SCRIPTS))
@@ -58,7 +42,7 @@ sys.path.insert(0, str(ROOT))
 import run_best  # noqa: E402  (flag whitelists / corpus verification)
 
 # experiment.py gained --grad-accum and --resume; extend the shared whitelist so
-# replays of local finetune args carry them. run_best's own replays are untouched
+# release finetune args carry them. run_best's own replays are untouched
 # (their archived args never contained these keys).
 EXPERIMENT_FLAGS = set(run_best.EXPERIMENT_FLAGS) | {"grad_accum", "resume"}
 PRETRAIN_FLAGS = set(run_best.PRETRAIN_FLAGS)
@@ -339,23 +323,6 @@ def stage_status(cfg: dict, profile: str, step: dict) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def power_state() -> str:
-    """'ac' | 'battery' | 'unknown' — best-effort on macOS."""
-    if sys.platform != "darwin":
-        return "unknown"
-    try:
-        out = subprocess.run(
-            ["pmset", "-g", "batt"], capture_output=True, text=True, timeout=10
-        ).stdout
-    except Exception:  # noqa: BLE001 - a failed probe is a warning, not a crash
-        return "unknown"
-    if "AC Power" in out or "AC attached" in out:
-        return "ac"
-    if "Battery Power" in out:
-        return "battery"
-    return "unknown"
-
-
 def backend_available(want: str) -> bool:
     try:
         import torch
@@ -389,7 +356,7 @@ def preflight(cfg: dict, profile: str, execute: bool) -> list[str]:
             problems.append(f"split verification failed: {exc}")
 
     # backend
-    want = prof.get("backend") or meta.get("backend", "mps")
+    want = prof.get("backend") or meta.get("backend", "cuda")
     if backend_available(want):
         print(f"  backend OK: {want}")
     else:
@@ -398,22 +365,8 @@ def preflight(cfg: dict, profile: str, execute: bool) -> list[str]:
             "train on a fallback device"
         )
 
-    # Power checks only apply to the macOS local path. Remote GPU nodes do not expose
-    # pmset and should not emit laptop-specific warnings.
-    if sys.platform == "darwin":
-        ps = power_state()
-        if ps == "battery":
-            problems.append(
-                "running on battery: multi-day training must be on AC power "
-                "(runner wraps commands in caffeinate; that cannot help a dying battery)"
-            )
-        elif ps == "ac":
-            print("  power OK: AC")
-        else:
-            print("  WARNING: could not confirm AC power; plug the machine in for long runs")
-
     # disk
-    results_base = ROOT / meta.get("results_dir", "results/local_release")
+    results_base = ROOT / meta.get("results_dir", "results/gpu_release")
     free_gb = shutil.disk_usage(results_base if results_base.exists() else ROOT).free / 2**30
     reserve = meta.get("disk_reserve_gb", 80)
     if free_gb < reserve:
@@ -473,13 +426,6 @@ def run_command(cmd: list[str], log_path: Path) -> int:
     return proc.wait()
 
 
-def macos_wrap(cmd: list[str]) -> list[str]:
-    """Prevent idle sleep for an unattended run (macOS only)."""
-    if sys.platform != "darwin":
-        return cmd
-    return ["caffeinate", "-i", "-s", *cmd]
-
-
 def run_training_stage(cfg: dict, profile: str, step: dict, log_path: Path,
                        resume: bool) -> int:
     """Launch one pretrain/finetune stage; never overwrites incompatible output."""
@@ -501,7 +447,7 @@ def run_training_stage(cfg: dict, profile: str, step: dict, log_path: Path,
         )
     # state == 'empty': fresh launch (or only transient logs). Passing --resume to
     # the scripts is harmless on a fresh start and required on a real resume.
-    cmd = macos_wrap(replay_argv(step["script"], desired))
+    cmd = replay_argv(step["script"], desired)
     rc = run_command(cmd, log_path)
     # reclassify after the run so status reflects the real files
     state, _detail = stage_status(cfg, profile, step)
@@ -556,7 +502,6 @@ def run_export(cfg: dict, profile: str, log_path: Path) -> int:
     eval_json = profile_dir(cfg, profile) / "evaluate" / "report.json"
     if eval_json.is_file():
         cmd += ["--eval-json", rel_of(eval_json)]
-    cmd = macos_wrap(cmd)
     rc = run_command(cmd, log_path)
     if rc == 0:
         status_mark(profile, "export", "done", rc, rel_of(log_path), status_file_for(cfg))
@@ -730,7 +675,7 @@ def show_plan(cfg: dict, profile: str, units: list[dict], execute: bool) -> None
                   f"  (archived effective {step['effective_batch']})")
             for m in missing_inputs(cfg, profile, unit):
                 print(f"  [missing input: {m}]")
-            cmd = macos_wrap(replay_argv(step["script"], desired))
+            cmd = replay_argv(step["script"], desired)
             print("  cmd: " + shlex.join(cmd))
             if execute and state not in ("empty", "resumable") and state != "complete":
                 print("  [will block --execute]")
@@ -754,7 +699,7 @@ def show_plan(cfg: dict, profile: str, units: list[dict], execute: bool) -> None
 
 
 def list_profiles(cfg: dict) -> None:
-    print("Local-training profiles")
+    print("Release-training profiles")
     print(f"{'profile':24s} {'task':6s} {'recommended':12s} phases")
     for name, p in cfg["profiles"].items():
         phases = ", ".join(s["phase"] for s in p["steps"])
@@ -770,12 +715,12 @@ def list_profiles(cfg: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Bounded local training + HF release prep",
+        description="Train, evaluate, and export a BinProv release model",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
     ap.add_argument("--config", default=None,
-                    help="path to JSON config (default: configs/local_release.json)")
+                    help="path to JSON config (default: configs/gpu_release.json)")
     ap.add_argument("--profile", default=None,
                     help="profile name from --list (default: the recommended one)")
     ap.add_argument("--phase", choices=PHASES + ("all",), default="all",

@@ -38,7 +38,7 @@ The verified CUDA profile is `configs/gpu_release.json`. It requires one A100
 Inspect the plan:
 
 ```bash
-python scripts/train_local_release.py \
+python scripts/train_release.py \
   --config configs/gpu_release.json \
   --profile opt4_wide_seed29
 ```
@@ -46,7 +46,7 @@ python scripts/train_local_release.py \
 Run training, evaluation, and export:
 
 ```bash
-python scripts/train_local_release.py \
+python scripts/train_release.py \
   --config configs/gpu_release.json \
   --profile opt4_wide_seed29 \
   --execute

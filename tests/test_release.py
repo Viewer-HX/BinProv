@@ -1,10 +1,10 @@
-"""Regression tests for scripts/train_local_release.py + scripts/export_hf.py.
+"""Regression tests for scripts/train_release.py + scripts/export_hf.py.
 
-Covers the three failure modes that matter for a local-release workflow: the
+Covers the three failure modes that matter for a release workflow: the
 profile->effective-batch mapping silently drifting from the archived recipes,
 the runner mutating anything on a dry run, and the export directory not
 round-tripping (load + deterministic prediction). Run directly
-(``python tests/test_local_release.py``) or under pytest.
+(``python tests/test_release.py``) or under pytest.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def _load(name):
     return mod
 
 
-runner = _load("train_local_release")
+runner = _load("train_release")
 export_hf = _load("export_hf")
 cfg_all = runner.load_config()
 # script parsers, for the "emitted command parses back to the recipe" check
@@ -52,7 +52,7 @@ def test_every_profile_step_preserves_the_archived_effective_batch():
                 pname, step["phase"])
             assert step["effective_batch"] == step["archived_effective"], (
                 pname, step["phase"])
-            assert step["workers"] == 0, pname
+            assert step["workers"] >= 0, pname
             assert step["grad_accum"] >= 1
             if step.get("archived_args"):
                 arc = runner.read_json(step["archived_args"])
@@ -79,7 +79,7 @@ def test_runner_commands_parse_to_the_mapped_batches():
                 parsed = vars(parsers[script].parse_args())
             assert parsed["batch_size"] == step["micro_batch"], (pname, step["phase"])
             assert parsed["grad_accum"] == step["grad_accum"], (pname, step["phase"])
-            assert parsed["workers"] == 0, (pname, step["phase"])
+            assert parsed["workers"] == step["workers"], (pname, step["phase"])
             assert parsed["seed"] == int(d.get("seed") or 0), (pname, step["phase"])
 
 
@@ -89,26 +89,18 @@ def test_runner_commands_parse_to_the_mapped_batches():
 
 
 def test_dry_run_is_mutation_free():
-    release_dir = ROOT / "results" / "local_release"
+    release_dir = ROOT / "results" / "gpu_release"
     existed_before = release_dir.exists()
-    with patch_or_none(runner.subprocess, "Popen", AssertionError("ran a command")), \
-         patch_or_none(runner.subprocess, "run", _fake_pmset_ac):
+    with patch_or_none(runner.subprocess, "Popen", AssertionError("ran a command")):
         with contextlib.redirect_stdout(io.StringIO()) as out, \
              contextlib.redirect_stderr(io.StringIO()):
-            rc = runner.main(["--profile", "opt4_narrow_seed13", "--dry-run"])
+            rc = runner.main(["--profile", "opt4_wide_seed29", "--dry-run"])
     assert rc == 0
     if existed_before:
         assert release_dir.is_dir()  # never delete anything a user made
     else:
-        assert not release_dir.exists(), "dry run created output under results/local_release"
+        assert not release_dir.exists(), "dry run created output under results/gpu_release"
     assert "nothing was created or executed" in out.getvalue()
-
-
-def _fake_pmset_ac(*_a, **_k):
-    import subprocess
-
-    return subprocess.CompletedProcess([], 0, stdout="Now drawing from 'AC Power'\n")
-
 
 class _noop:
     def __enter__(self):
@@ -368,10 +360,10 @@ GPU_CFG = ROOT / "configs" / "gpu_release.json"
 
 
 def test_config_flag_loads_default_when_omitted():
-    """Omitting --config loads configs/local_release.json."""
+    """Omitting --config loads configs/gpu_release.json."""
     cfg = runner.load_config()
     assert "profiles" in cfg
-    assert "opt4_narrow_seed13" in cfg["profiles"]
+    assert "opt4_wide_seed29" in cfg["profiles"]
 
 
 def test_config_flag_loads_gpu_release():
@@ -408,8 +400,7 @@ def test_gpu_config_dry_run():
     if not GPU_CFG.is_file():
         print("  skipping: configs/gpu_release.json not present")
         return
-    with patch_or_none(runner.subprocess, "Popen", AssertionError("ran a command")), \
-         patch_or_none(runner.subprocess, "run", _fake_pmset_ac):
+    with patch_or_none(runner.subprocess, "Popen", AssertionError("ran a command")):
         with contextlib.redirect_stdout(io.StringIO()) as out, \
              contextlib.redirect_stderr(io.StringIO()):
             rc = runner.main(["--config", str(GPU_CFG), "--dry-run"])

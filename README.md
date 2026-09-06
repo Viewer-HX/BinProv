@@ -137,9 +137,6 @@ Run `--group all --execute` once to produce all supported result tables, reusing
 shared model runs within that plan.
 ## Documentation
 
-- [docs/LOCAL_TRAINING.md](docs/LOCAL_TRAINING.md) — **bounded local training on
-  one Mac** (MPS): the `opt4_narrow_seed13` / `opt4_wide_seed29` profiles, memory
-  measurements, `--grad-accum`, resume/export workflow.
 - [docs/RESULTS.md](docs/RESULTS.md) — measured metrics, configuration
   membership, evidence, and reproduction.
 - Supporting documentation: [docs/REPRODUCTION.md](docs/REPRODUCTION.md)

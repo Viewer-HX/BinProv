@@ -1,5 +1,5 @@
 {
-  "_comment": "Verified single-GPU A100 80 GB profile for scripts/train_local_release.py --config configs/gpu_release.json. Reproduces the opt4_wide_seed29 recipe (2048-byte encoder, seed 29) with the tested CUDA micro-batches and gradient accumulation. Output lands under results/gpu_release/.",
+  "_comment": "Verified single-GPU A100 80 GB profile for scripts/train_release.py --config configs/gpu_release.json. Reproduces the opt4_wide_seed29 recipe (2048-byte encoder, seed 29) with the tested CUDA micro-batches and gradient accumulation. Output lands under results/gpu_release/.",
   "meta": {
     "results_dir": "results/gpu_release",
     "logs_dir": "logs",

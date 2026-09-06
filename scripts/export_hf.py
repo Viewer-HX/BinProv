@@ -24,9 +24,9 @@ first bit-for-bit.
 
 Example::
 
-    python scripts/export_hf.py --checkpoint results/local_release/opt4_narrow_seed13/opt4 \\
-        --out results/local_release/opt4_narrow_seed13/export \\
-        --model-name binprov-opt4-narrow-seed13
+    python scripts/export_hf.py --checkpoint results/gpu_release/opt4_wide_seed29/opt4 \\
+        --out results/gpu_release/opt4_wide_seed29/export \\
+        --model-name binprov
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Reproduce the archived best results from their exact recorded parameters.
+"""Reproduce the measured results from their exact recorded parameters.
 
-Reads configs/best_results.json and replays each archived run by translating its
+Reads configs/best_results.json and replays each recorded run by translating its
 saved args.json back into a command line (flag whitelist, correct bool / nargs
 handling). Omitted flags stay omitted: early wide runs (r4, r6) have no
 ``--val-seed`` and none is invented for them. Everything is written under
@@ -501,7 +501,7 @@ def run_offline(step: dict, cfg: dict, execute: bool) -> int | None:
 
 
 def list_groups(cfg: dict) -> None:
-    print("Best-results groups (configs/best_results.json)")
+    print("Measured-result groups (configs/best_results.json)")
     print(f"{'group':32s} {'runs':>4s}  metric / expected")
     for gkey, g in cfg["groups"].items():
         runs = g.get("runs")
@@ -520,7 +520,7 @@ def list_groups(cfg: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Replay the archived best results from configs/best_results.json",
+        description="Replay the measured results from configs/best_results.json",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ap.add_argument("--group", default=None,
@@ -573,7 +573,7 @@ def main(argv: list[str] | None = None) -> int:
                    + ", ".join(cfg["groups"]) + ", all")
 
     execute = args.execute
-    print(f"== BinProv best-results plan: group '{group_title}' "
+    print(f"== BinProv measured-results plan: group '{group_title}' "
           f"(phase {args.phase}, {'EXECUTE' if execute else 'dry-run'}) ==")
     print(f"corpus: {cfg['corpus_dir']}   fresh outputs under: {cfg['results_dir']}/")
 

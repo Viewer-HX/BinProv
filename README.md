@@ -25,12 +25,12 @@ pip install -r requirements.txt
 python inference.py --model model --elf /path/to/binary.elf
 ```
 
-## Best results first
+## Measured results
 
-BinKit x86_64, **program-grouped split** (47 test programs); curated archived
-measurements. The supported full-training profile uses one A100 80 GB GPU.
+BinKit x86_64, **program-grouped split** (47 test programs). The supported
+full-training profile uses one A100 80 GB GPU.
 Full provenance and replay:
-[docs/BEST_RESULTS.md](docs/BEST_RESULTS.md). Verified offline tables: [reports/tables/best/](reports/tables/best/).
+[docs/RESULTS.md](docs/RESULTS.md). Verified offline tables: [reports/tables/best/](reports/tables/best/).
 
 **Units.** The encoder *input* is 2048 bytes, but accuracy is scored at the
 paper's **non-overlapping 512-byte stride** (the wide encoder sees overlapping
@@ -40,26 +40,16 @@ wide inputs also include context beyond each target window.
 
 | Result | Score | Meaning | Group |
 |---|---|---|---|
+| Released `opt4_wide_seed29` model | **84.23%** | sequence level, 116,321 windows | single model |
+| Released `opt4_wide_seed29` model | **93.88%** | binary soft vote, 376 binaries | single model |
 | O2/O3 (hard task), 7-wide ensemble @512 B | **75.10%** | sequence level, 55,657 windows | `o2o3_7wide_512B` |
 | Same 7 runs, 16.9 KB aperture | **81.10%** | sequence level, mean over 33 windows | `o2o3_7wide_16.9KB` |
 | 2048-B encoder alone on O2/O3 | **71.98%** (SD 0.68 pp) | mean of **three** seeds | `o2o3_pretrained_wide_mean` |
 | 4-way O0/O1/O2/O3, 6-run ensemble | **87.62%** | sequence level, 116,321 windows, 16.9 KB aperture | `opt4_6run_16.9KB` |
 | opt4, binary-level vote | **95.21%** | vote over the 3 *wide* runs only | `opt4_3wide_binary` |
-| Archived 19-run O2/O3 binary vote | 93.09% | exact membership **not** reconstructable | `o2o3_19run_binary` |
 
-**7-wide membership** (as in [configs/best_results.json](configs/best_results.json)):
-`r4_ctx2048_dense` + `r6_dense2048_seed{7,13,29}` + `r7_wide2048_seed{7,13,29}`.
-All are the 2048-byte encoder at stride 512. The r4/r6 runs init from the 512-byte MLM
-(tiled positions); the r7 runs init from the continued 2048-byte MLM.
-
-- **71.98% is three seeds** (`r7_wide2048_seed{7,13,29}`), *not* four: the
-  r4 seed 1234 and r6 seeds 7/13/29 start from `mlm512`, not `mlm2048`.
-- **93.09% is archived only**: its exact 19-run membership cannot be
-  reconstructed from archived args, and recomputing it needs the archived
-  `probs.npz` set, which is not in this repo. Probability files alone are not
-  sufficient — do not treat it as reachable by the runner.
-- Per-run accuracies are not stated here; they are read at runtime from each
-  run's archived `result.json` (linked from `docs/BEST_RESULTS.md`).
+Exact ensemble membership and per-run evidence are recorded in
+[docs/RESULTS.md](docs/RESULTS.md).
 ## Install
 
 ```bash
@@ -111,10 +101,10 @@ python scripts/build_corpus.py --root data/binkit/normal \
 ```
 
 Split evidence: `reports/tables/split_programs.txt`.
-## Replaying the best results
+## Reproducing the measurements
 
 One driver, `scripts/run_best.py`, reads
-[configs/best_results.json](configs/best_results.json) and each run's archived
+[configs/best_results.json](configs/best_results.json) and each run's recorded
 `args.json`. **Dry-run by default** (prints, mutates nothing); `--execute` runs.
 
 ```bash
@@ -138,13 +128,12 @@ The packed corpus is also required. New training generates its own probabilities
 After the data above is in place:
 
 ```bash
-python scripts/run_best.py --group o2o3_7wide_16.9KB --execute         # best O2/O3 sequence result
+python scripts/run_best.py --group o2o3_7wide_16.9KB --execute         # measured O2/O3 ensemble
 python scripts/run_best.py --group opt4_6run_16.9KB --phase offline \
     --archive-probs --execute            # offline ensemble from archived probs
 ```
 
-`o2o3_19run_binary` has no recipe and is explicitly rejected. Existing training
-output directories are not overwritten; move them aside for a new run, or use
+Existing training output directories are not overwritten; move them aside for a new run, or use
 `--phase train` / `--phase offline` to start from completed prerequisite stages.
 Run `--group all --execute` once to produce all supported result tables, reusing
 shared model runs within that plan.
@@ -153,12 +142,12 @@ shared model runs within that plan.
 - [docs/LOCAL_TRAINING.md](docs/LOCAL_TRAINING.md) — **bounded local training on
   one Mac** (MPS): the `opt4_narrow_seed13` / `opt4_wide_seed29` profiles, memory
   measurements, `--grad-accum`, resume/export workflow.
-- [docs/BEST_RESULTS.md](docs/BEST_RESULTS.md) — **start here for results**:
-  headline numbers, run membership, replay guide.
-- Supporting documentation: [docs/RESULTS.md](docs/RESULTS.md) (paper
-  reproduction), [docs/REPRODUCTION.md](docs/REPRODUCTION.md) (paper-table →
-  command map), and [docs/DATA.md](docs/DATA.md) (disk budget, corpus format).
-- Curated artifacts for the best recipes and released model: [reports/](reports/)
+- [docs/RESULTS.md](docs/RESULTS.md) — measured metrics, configuration
+  membership, evidence, and reproduction.
+- Supporting documentation: [docs/REPRODUCTION.md](docs/REPRODUCTION.md)
+  (method and command map) and [docs/DATA.md](docs/DATA.md) (disk budget and
+  corpus format).
+- Curated artifacts for the measured configurations and released model: [reports/](reports/)
   (weights are hosted on Hugging Face).
 ## Citation
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "Machine-readable map of the best headline results to the exact archived runs and parameters that produced them. Single source of truth for scripts/run_best.py (dry-run default), scripts/reproduce_best.sh (wrapper), and docs/BEST_RESULTS.md. Per-run accuracies are NOT copied here: they are read from each run's archived result.json at runtime so the manifest cannot drift from the evidence.",
+  "_comment": "Machine-readable map of the measured results to the exact recorded runs and parameters that produced them. Single source of truth for scripts/run_best.py (dry-run default), scripts/reproduce_best.sh (wrapper), and docs/RESULTS.md. Per-run accuracies are read from each run's result.json at runtime so the manifest cannot drift from the evidence.",
   "meta": {
     "corpus": "BinKit x86_64, program-grouped split (47 test programs / 28 val programs). O2/O3 test = 55,657 windows; opt4 test = 116,321 windows.",
     "versions": "python 3.12.11, torch 2.8.0+cu128, transformers 4.55.4, numpy 2.3.3",
@@ -231,20 +231,12 @@
       "expected_accuracy": 0.7198,
       "expected_sd": 0.0068,
       "subset_runs_of": "o2o3_7wide_512B",
-      "note": "Three seeds only (seed 1234 is NOT in this mean: r4/r6 start from the 512-byte MLM, not from mlm2048). Comparison control: pinned-partition 512-byte baseline mean 68.61% (r1_base + r8_base_pinned_seed{7,13,29}, archived only).",
+      "note": "Mean of the three r7 seeds. The r4/r6 runs start from the 512-byte MLM and are not part of this measurement.",
       "runs": [
         "r7_wide2048_seed7",
         "r7_wide2048_seed13",
         "r7_wide2048_seed29"
       ]
-    },
-    "o2o3_19run_binary": {
-      "description": "Archived 19-run O2/O3 binary-level majority-vote ensemble (93.09%)",
-      "unit": "binary-level accuracy, majority vote over all windows per binary",
-      "kind": "archived_no_recipe",
-      "expected_accuracy": 0.9309,
-      "reproducible": false,
-      "note": "The archive reports 93.09%, but does not record the exact 19-member ensemble. Reproduction needs both the precise member list and their probabilities or checkpoints; the probability archive alone does not identify the original selection."
     },
     "opt4_6run_16.9KB": {
       "description": "6-run ensemble (3 narrow + 3 wide) on the 4-way task with a 16.9 KB aperture",

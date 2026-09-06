@@ -1,4 +1,4 @@
-# Verified best-result tables
+# Verified result tables
 
 Recomputed locally on 2026-09-05 from `BinProv-probs-20260903.tar`
 (SHA-256 `aeb1de809b6e1ad36145633b14073a483b5c9d078047758c2293b470125e4434`),
@@ -13,7 +13,3 @@ calculation. These are offline recalculations; no model was retrained.
 | O2/O3, pretrained-wide three-seed mean | 71.98% (SD 0.68 pp) |
 | opt4, 6-run ensemble, radius 16 | 87.62% sequence; 94.41% binary |
 | opt4, 3-wide ensemble | 84.42% sequence; 95.21% binary |
-
-The exact 19-member ensemble behind the separately reported O2/O3 binary score
-of 93.09% is still not identified by the archive, so it is not represented here
-as a reproducible recipe.

@@ -220,7 +220,7 @@ and soft-votes per class over the windows.
 
 ## See also
 
-- Archived numbers behind the profiles: `docs/BEST_RESULTS.md`,
+- Measured references for the profiles: `docs/RESULTS.md`,
   `reports/runs/best/r9_opt4_base_seed13/result.json`,
   `reports/runs/best/r9_opt4_wide_seed29/result.json`.
 - Gradient-accumulation correctness tests: `tests/test_grad_accum.py`.

@@ -10,9 +10,11 @@
 # native dependencies, and the metrics are hand-rolled so evaluation runs
 # anywhere the model runs.
 
-torch>=2.0
-transformers>=4.35
-numpy>=1.23
+# Versions used by the verified A100 80 GB training run and published model.
+# Keep these pinned when reproducing the reported measurements.
+torch==2.8.0
+transformers==4.55.4
+numpy==2.3.3
 
 # Optional, only for scripts/fetch_binkit.sh:
 #   gdown>=4.7    BinKit is hosted on Google Drive
@@ -20,17 +22,6 @@ numpy>=1.23
 #                 bsdtar/libarchive, which is usually already installed and
 #                 reads .7z with the same wildcard syntax as tar.
 
-# ---------------------------------------------------------------------------
-# Versions used by the verified A100 80 GB release run. The bounds above are
-# what the code needs; these are what the published model ran on. Accuracy moves
-# by 1-2 points between seeds, so a different torch or transformers version is
-# a plausible source of a similar-sized shift -- pin these if you are comparing
-# against the tables rather than just running the pipeline.
-#
-#   python           3.12.11
-#   torch            2.8.0+cu128
-#   transformers     4.55.4
-#   numpy            2.3.3
-#
-# GPU: one NVIDIA A100 80 GB, bf16 autocast throughout. The exact
-# micro-batches and gradient accumulation are in configs/gpu_release.json.
+# The recorded Python version is 3.12.11. Training used PyTorch's CUDA 12.8
+# build and bf16 on one NVIDIA A100 80 GB. Exact batches and accumulation are
+# in configs/gpu_release.json.

@@ -58,11 +58,9 @@ conda activate binprov
 pip install -r requirements.txt          # for BinKit fetch also: pip install gdown
 ```
 
-`requirements.txt` bounds: torch ≥2.0, transformers ≥4.35, numpy ≥1.23; corpus
-building needs no torch. **Recorded versions** (results produced with): python
-3.12.11, torch 2.8.0+cu128, transformers 4.55.4, numpy 2.3.3. Accuracy moves 1–2
-points with seed, so a different torch/transformers is a plausible source of a
-similar shift — pin these when comparing against the tables.
+`requirements.txt` pins the versions used to train and publish the model:
+torch 2.8.0, transformers 4.55.4, and numpy 2.3.3, with Python 3.12.11 recorded
+for the measured run. Corpus building itself does not require torch.
 
 ## Hardware requirements for training
 

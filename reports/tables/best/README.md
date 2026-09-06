@@ -1,15 +1,12 @@
-# Verified result tables
+# Result table index
 
-Recomputed locally on 2026-09-05 from `BinProv-probs-20260903.tar`
-(SHA-256 `aeb1de809b6e1ad36145633b14073a483b5c9d078047758c2293b470125e4434`),
-the committed matching `result.json` metadata, and the packed canonical corpus.
-The runner verified the 47 test and 28 pinned validation programs before every
-calculation. These are offline recalculations; no model was retrained.
+This directory contains the detailed measurements referenced by
+[`docs/RESULTS.md`](../../../docs/RESULTS.md).
 
-| recipe | verified result |
-|---|---:|
-| O2/O3, 7-wide ensemble, 512-byte target stride | 75.10% sequence; 91.49% binary |
-| O2/O3, same ensemble, radius 16 | 81.10% sequence |
-| O2/O3, pretrained-wide three-seed mean | 71.98% (SD 0.68 pp) |
-| opt4, 6-run ensemble, radius 16 | 87.62% sequence; 94.41% binary |
-| opt4, 3-wide ensemble | 84.42% sequence; 95.21% binary |
+| file | task and configuration | contents |
+|---|---|---|
+| [`o2o3_7wide_512B.md`](o2o3_7wide_512B.md) | O2 versus O3; seven 2048-byte models evaluated at a 512-byte target stride | Per-model sequence metrics, 7-model ensemble metrics, and binary soft-vote results. The ensemble reaches 75.10% sequence accuracy and 91.49% binary accuracy. |
+| [`o2o3_7wide_16.9KB.md`](o2o3_7wide_16.9KB.md) | The same seven O2/O3 models with a radius-16 probability window | Per-model context-aggregated metrics and the 7-model ensemble result. The ensemble reaches 81.10% sequence accuracy. |
+| [`o2o3_pretrained_wide_mean.md`](o2o3_pretrained_wide_mean.md) | O2 versus O3; three seeds initialized from the continued 2048-byte MLM | Per-seed sequence accuracy plus the mean and standard deviation: 71.98% ± 0.68 percentage points. |
+| [`opt4_3wide_binary.md`](opt4_3wide_binary.md) | O0/O1/O2/O3; three 2048-byte models | Per-model sequence and binary metrics, 3-model ensemble metrics, and binary soft voting. The ensemble reaches 84.42% sequence accuracy and 95.21% binary accuracy. |
+| [`opt4_6run_16.9KB.md`](opt4_6run_16.9KB.md) | O0/O1/O2/O3; three 512-byte and three 2048-byte models with radius-16 aggregation | Per-model metrics, 6-model ensemble metrics, context-aggregated results, and binary soft voting. The ensemble reaches 87.62% sequence accuracy and 94.41% binary accuracy. |

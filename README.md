@@ -143,8 +143,8 @@ shared model runs within that plan.
 - [docs/RESULTS.md](docs/RESULTS.md) — measured metrics, configuration
   membership, evidence, and reproduction.
 - Supporting documentation: [docs/REPRODUCTION.md](docs/REPRODUCTION.md)
-  (method and command map) and [docs/DATA.md](docs/DATA.md) (disk budget and
-  corpus format).
+  (end-to-end training workflow) and [docs/DATA.md](docs/DATA.md) (data download
+  and corpus building).
 - Curated artifacts for the measured configurations and released model: [reports/](reports/)
   (weights are hosted on Hugging Face).
 ## Citation

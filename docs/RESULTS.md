@@ -46,6 +46,17 @@ The ensemble measurements were independently recomputed from the saved
 per-window probabilities and canonical corpus. Their exact member lists are
 recorded below.
 
+## Training loss
+
+![Training loss for MLM512, MLM2048, and fine-tuning](../reports/figures/release_training_loss.png)
+
+The panels show the three consecutive stages used to train the released model.
+Blue lines are interval-averaged training loss; orange points are validation
+loss measured after each MLM epoch. Fine-tuning selected its checkpoint by
+validation accuracy, so that stage records training loss only. Each panel has
+its own vertical scale because masked-byte pre-training and four-class
+fine-tuning optimize different objectives.
+
 ## Configuration membership
 
 The O2/O3 7-model ensemble uses:

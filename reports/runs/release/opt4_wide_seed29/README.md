@@ -26,7 +26,21 @@ Files:
 - `pipeline_status.json`: completion timestamps for MLM512, MLM2048, fine-tune,
   and export.
 - `hardware.json`: portable hardware allocation and elapsed-time summary.
+- `mlm512/` and `mlm2048/`: compact pre-training traces and unigram baselines.
 - `train_log.jsonl`: compact fine-tuning trace.
+
+The three loss curves are shown in
+[`reports/figures/release_training_loss.png`](../../../figures/release_training_loss.png).
+Regenerate the figure from these traces with:
+
+```bash
+python scripts/plot_training.py --sequential \
+  --log "MLM512=reports/runs/release/opt4_wide_seed29/mlm512" \
+  --log "MLM2048=reports/runs/release/opt4_wide_seed29/mlm2048" \
+  --log "O0/O1/O2/O3 fine-tuning=reports/runs/release/opt4_wide_seed29/train_log.jsonl" \
+  --title "Released model: training loss by stage" \
+  --out reports/figures/release_training_loss.png
+```
 
 The portable training parameters are in `configs/gpu_release.json`; hardware
 requirements are documented in the repository README.

@@ -14,6 +14,13 @@ training, and no lost history if a run is interrupted.
         --log "warm start=checkpoints/compiler" \\
         --log "from scratch=checkpoints/compiler_scratch"
 
+    # show consecutive training stages as separate loss panels
+    python scripts/plot_training.py --sequential \\
+        --log "MLM512=checkpoints/mlm512" \\
+        --log "MLM2048=checkpoints/mlm2048" \\
+        --log "fine-tuning=checkpoints/opt4" \\
+        --out results/training_loss.png
+
 Loss, accuracy and learning rate go in **separate stacked panels sharing the
 x-axis**, never on twin y-axes: two measures on one plot with two scales invents a
 correlation that is not in the data.
@@ -134,6 +141,59 @@ def reference_line(ax, y: float, label: str):
     )
 
 
+def plot_sequential_loss(runs: list[dict], args) -> None:
+    """Plot one independent loss panel for each consecutive training stage."""
+    fig, axes = plt.subplots(
+        len(runs), 1, sharex=False,
+        figsize=(8.4, 2.35 * len(runs) + 0.85),
+    )
+    if len(runs) == 1:
+        axes = [axes]
+    fig.patch.set_facecolor(SURFACE)
+
+    for axis, run in zip(axes, runs):
+        x, y = series(run["rows"], "loss")
+        axis.plot(x, y, color=SERIES[0], linewidth=LINE_W, label="train")
+        xv, yv = epoch_series(run["rows"], "val_loss")
+        if yv:
+            axis.plot(
+                xv, yv, color=SERIES[1], linewidth=LINE_W,
+                marker="o", markersize=MARKER_SZ, label="validation",
+            )
+        base = run["baseline"]
+        if base and base.get("unigram_loss_nats"):
+            reference_line(
+                axis, base["unigram_loss_nats"],
+                f"unigram baseline {base['unigram_loss_nats']:.2f}",
+            )
+        style_axis(axis, "cross-entropy (nats)", last=True)
+        axis.set_title(run["label"], loc="left", color=INK, fontsize=10, pad=7)
+        handles, labels = axis.get_legend_handles_labels()
+        if len(handles) >= 2:
+            axis.legend(
+                handles, labels, frameon=False, loc="center right", fontsize=9,
+                labelcolor=INK_SECONDARY, handlelength=1.8,
+            )
+
+    fig.suptitle(
+        args.title or "Training loss by stage",
+        color=INK, fontsize=12, x=0.06, ha="left", y=0.99,
+    )
+    fig.tight_layout(rect=(0, 0, 0.995, 0.96))
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=args.dpi, facecolor=SURFACE)
+    print(f"wrote {out}")
+
+    for run in runs:
+        _, train_loss = series(run["rows"], "loss")
+        _, val_loss = epoch_series(run["rows"], "val_loss")
+        summary = f"{run['label']}: {len(train_loss)} training points"
+        if val_loss:
+            summary += f", {len(val_loss)} validation points; final validation loss {val_loss[-1]:.4f}"
+        print(summary)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -149,6 +209,10 @@ def main() -> int:
     ap.add_argument("--title", default=None)
     ap.add_argument("--dpi", type=int, default=160)
     ap.add_argument("--no-lr", action="store_true", help="omit the learning-rate panel")
+    ap.add_argument(
+        "--sequential", action="store_true",
+        help="plot each --log as an independent loss panel for consecutive stages",
+    )
     args = ap.parse_args()
 
     runs = []
@@ -162,6 +226,10 @@ def main() -> int:
             "rows": rows,
             "baseline": read_baseline(path),
         })
+
+    if args.sequential:
+        plot_sequential_loss(runs, args)
+        return 0
 
     multi = len(runs) > 1
     # Which accuracy field this is: MLM logs mlm_acc, fine-tuning logs train_acc

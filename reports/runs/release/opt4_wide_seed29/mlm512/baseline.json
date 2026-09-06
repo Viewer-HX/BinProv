@@ -1,0 +1,6 @@
+{
+  "unigram_loss_nats": 4.351,
+  "unigram_top1": 0.1398,
+  "num_sequences": 315710,
+  "split": "train"
+}
